@@ -24,17 +24,8 @@ let S = normalize(window.TRACKER_DATA);
 let mode = 'local', artifactApi = null, readOnly = false, saveTimer = null;
 let view = 'units', noteTab = 'cooling';
 
-/* Change history is PRIVATE: it lives in the artifact's database, readable only by the
-   owner and Editors (see the db rules). It is never written into data.js, so Viewers
-   can't see change dates even in the page source. */
-let priv = false, dbApi = null, userApi = null, myId = null;
-let HIST = [], LAST = new Map(), names = {};
-const LS_HIST = 'filter-belt-tracker-history';
-function lastOf(u, part) { return LAST.get(u.id + '|' + part) || ''; }
-function recompute() {
-  LAST = new Map();
-  HIST.forEach(h => { const k = h.unitId + '|' + h.part; if (!LAST.has(k) || String(h.date) > LAST.get(k)) LAST.set(k, String(h.date)); });
-}
+function lastOf(u, part) { return (part === 'belts' ? u.beltLast : u.filterLast) || ''; }
+function markChanged(u, part, date) { if (part === 'belts') u.beltLast = date; else u.filterLast = date; render(); persist(); }
 
 /* ---------- dates ---------- */
 function parseD(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
@@ -51,7 +42,6 @@ function dueInfo(last, months) {
   return { status: days < 0 ? 'overdue' : days <= 14 ? 'soon' : 'ok', due, days };
 }
 function unitDue(u) {
-  if (!priv) return { status: 'none', due: null, days: null };
   const items = [];
   if ((u.filters || []).length) items.push(dueInfo(lastOf(u, 'filters'), u.filterInterval));
   if ((u.belts || []).length) items.push(dueInfo(lastOf(u, 'belts'), u.beltInterval));
@@ -72,7 +62,7 @@ function setStatus(text, cls) { $('#saveText').textContent = text; $('#save').cl
 
 function dataJs() {
   return '/* Filter & Belt Tracker data. The page rewrites this file when you save. */\n' +
-    'window.TRACKER_DATA = ' + JSON.stringify({ ...S, units: S.units.map(({ filterLast, beltLast, ...u }) => u) }, null, 1).replace(/</g, '\\u003c') + ';\n';
+    'window.TRACKER_DATA = ' + JSON.stringify(S, null, 1).replace(/</g, '\\u003c') + ';\n';
 }
 function persist() {
   lsSet();
@@ -96,92 +86,12 @@ async function doPublish() {
   }
 }
 async function initStorage() {
-  const hasClaude = window.claude && typeof window.claude.use === 'function';
-  try { if (hasClaude) artifactApi = await window.claude.use('artifact'); } catch (e) { artifactApi = null; }
-  if (artifactApi) {
-    mode = 'shared'; setStatus('All changes saved');
-    let db = null, user = null;
-    try { [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]); } catch (e) {}
-    userApi = user;
-    let canSee = false;
-    try { canSee = !!(user && await user.canEdit()); } catch (e) {}
-    if (db && canSee) {
-      dbApi = db; priv = true;
-      try { myId = await user.id(); } catch (e) {}
-      subscribeHistory();
-    }
-    applyPrivacy(); render();
-    return;
-  }
-  // Opened as plain files (no Claude): everything stays in this browser, history included.
-  mode = 'local'; priv = true;
+  try { if (window.claude && typeof window.claude.use === 'function') artifactApi = await window.claude.use('artifact'); } catch (e) { artifactApi = null; }
+  if (artifactApi) { mode = 'shared'; setStatus('All changes saved'); return; }
+  mode = 'local';
   const saved = lsGet();
-  if (saved) S = normalize(saved);
-  try { HIST = JSON.parse(localStorage.getItem(LS_HIST) || '[]'); } catch (e) { HIST = []; }
-  // carry over dates saved by older versions of the page
-  S.units.forEach(u => {
-    if (u.filterLast && !HIST.some(h => h.unitId === u.id && h.part === 'filters')) HIST.push({ id: uid(), unitId: u.id, unitName: u.name, part: 'filters', date: u.filterLast, at: '' });
-    if (u.beltLast && !HIST.some(h => h.unitId === u.id && h.part === 'belts')) HIST.push({ id: uid(), unitId: u.id, unitName: u.name, part: 'belts', date: u.beltLast, at: '' });
-    delete u.filterLast; delete u.beltLast;
-  });
-  recompute(); applyPrivacy(); render();
+  if (saved) { S = normalize(saved); render(); }
   setStatus('Saved in this browser');
-}
-
-function applyPrivacy() {
-  document.body.classList.toggle('is-private', priv);
-  const opt = $('#sort option[value=due]');
-  opt.hidden = opt.disabled = !priv;
-  if (!priv && $('#sort').value === 'due') $('#sort').value = 'name';
-  if (!priv && view === 'history') go('units');
-}
-
-/* ---------- private change history ---------- */
-function subscribeHistory() {
-  let loaded = false;
-  const t = setTimeout(() => { if (!loaded) setStatus('Change history can’t be reached yet', 'warn'); }, 10000);
-  dbApi.collection('history').onSnapshot(snap => {
-    HIST = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    recompute(); render();
-    if (!snap.metadata.fromCache && !loaded) { loaded = true; clearTimeout(t); setStatus('All changes saved'); }
-  }, () => { clearTimeout(t); setStatus('Change history unavailable', 'warn'); });
-}
-async function addHistory(u, part, date) {
-  const rec = { unitId: u.id, unitName: u.name, part, date, at: new Date().toISOString(), by: myId || '' };
-  if (mode === 'local') {
-    HIST.push({ id: uid(), ...rec });
-    try { localStorage.setItem(LS_HIST, JSON.stringify(HIST)); } catch (e) {}
-    recompute(); render(); return;
-  }
-  try { await dbApi.collection('history').add(rec); }
-  catch (e) { setStatus(e && e.code === 'quota_exceeded' ? 'History is full — delete old entries' : 'Couldn’t save that change — try again', 'warn'); }
-}
-async function deleteHistory(hid) {
-  if (mode === 'local') {
-    HIST = HIST.filter(h => h.id !== hid);
-    try { localStorage.setItem(LS_HIST, JSON.stringify(HIST)); } catch (e) {}
-    recompute(); render(); return;
-  }
-  try { await dbApi.collection('history').doc(hid).delete(); } catch (e) { setStatus('Couldn’t delete that entry', 'warn'); }
-}
-function renderHistory() {
-  const q = $('#hq').value.trim().toLowerCase(), part = $('#hPart').value;
-  const unitName = h => (S.units.find(u => u.id === h.unitId) || {}).name || h.unitName || '?';
-  let rows = HIST.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.at).localeCompare(String(a.at)));
-  if (part) rows = rows.filter(h => h.part === part);
-  if (q) rows = rows.filter(h => unitName(h).toLowerCase().includes(q));
-  const el = $('#history');
-  if (!rows.length) { el.innerHTML = `<div class="empty"><h2>${HIST.length ? 'No matches' : 'No changes logged yet'}</h2><p>${HIST.length ? 'Nothing fits that search.' : 'Use “Filters changed today” or “Belts changed today” on a unit, or set a last-changed date when editing one.'}</p></div>`; return; }
-  const missing = [...new Set(rows.map(h => h.by).filter(b => b && !(b in names)))];
-  if (missing.length && userApi && userApi.profiles) {
-    missing.forEach(b => names[b] = '');
-    Promise.resolve(userApi.profiles(missing)).then(ps => { missing.forEach(b => names[b] = (ps && ps[b] && ps[b].name) || ''); if (view === 'history') renderHistory(); }).catch(() => {});
-  }
-  el.innerHTML = `<table class="hist-table"><thead><tr><th>Date</th><th>Unit</th><th>What</th><th class="units-col">Logged by</th><th></th></tr></thead><tbody>
-    ${rows.map(h => `<tr><td>${niceD(parseD(h.date))}</td><td><b>${esc(unitName(h))}</b></td><td>${h.part === 'belts' ? 'Belts' : 'Filters'} changed</td>
-      <td class="units-col">${h.by ? esc(names[h.by] || 'Someone') : (mode === 'local' ? 'This browser' : '—')}</td>
-      <td style="text-align:right"><button class="btn ghost sm" data-hdel="${esc(h.id)}" title="Delete entry">✕</button></td></tr>`).join('')}
-  </tbody></table>`;
 }
 
 /* ---------- helpers ---------- */
@@ -207,7 +117,6 @@ function filterChip(f) {
 function beltChip(b) { return `<span class="chip">${esc(b.size || '?')} ×${esc(b.qty || 1)}${b.note ? `<small>${esc(b.note)}</small>` : ''}</span>`; }
 function schedLine(label, last, months, has) {
   if (!has) return '';
-  if (!priv) return months ? `<div class="sched"><b>${label}:</b> changed every ${esc(months)} mo</div>` : '';
   const i = dueInfo(last, months), parts = [`<b>${label}:</b>`];
   parts.push(last ? 'last ' + niceD(parseD(last)) : 'no last-change date');
   if (months) parts.push(`every ${esc(months)} mo`);
@@ -228,19 +137,12 @@ function render() {
   $('#stOver').textContent = ds.filter(d => d.status === 'overdue').length;
   $('#stSoon').textContent = ds.filter(d => d.status === 'soon').length;
   $('#stFilters').textContent = num(S.units.reduce((n, u) => n + (u.filters || []).reduce((a, f) => a + (+f.qty || 0), 0), 0));
-  $('#stBelts').textContent = num(S.units.reduce((n, u) => n + (u.belts || []).reduce((a, b) => a + (+b.qty || 0), 0), 0));
-  const cvs = S.units.filter(u => /^ash/i.test(u.name)).map(coolVal).filter(v => typeof v === 'number');
-  $('#stCool').textContent = cvs.length ? Math.round(cvs.reduce((a, v) => a + v, 0) / cvs.length) + '%' : '—';
-  $('#unitList').innerHTML = S.units.map(u => `<option value="${esc(u.name)}">`).join('');
-  $('#cCool').textContent = S.notes.cooling.length;
-  $('#cHeat').textContent = S.notes.heating.length;
-  ({ units: renderUnits, totals: renderTotals, parts: renderParts, notes: renderNotes, history: renderHistory })[view]();
+  ({ units: renderUnits, totals: renderTotals, parts: renderParts, notes: renderNotes })[view]();
 }
 
 function renderUnits() {
   const q = $('#q').value.trim().toLowerCase();
-  const ft = $('#fType').value, fs = priv ? $('#fStatus').value : '', fc = $('#fCool').value;
-  let sort = $('#sort').value; if (!priv && sort === 'due') sort = 'name';
+  const ft = $('#fType').value, fs = $('#fStatus').value, fc = $('#fCool').value, sort = $('#sort').value;
   let rows = S.units.map(u => ({ u, d: unitDue(u) }));
   if (q) rows = rows.filter(r => q.split(/\s+/).every(t => searchText(r.u).includes(t)));
   if (ft) rows = rows.filter(r => r.u.type === ft);
@@ -267,8 +169,8 @@ function renderUnits() {
           ${meta ? `<div class="meta">${meta}</div>` : ''}
           ${coolLine(u)}
         </div>
-        ${priv ? (() => { const lc = [lastOf(u, 'filters'), lastOf(u, 'belts')].filter(Boolean).sort().pop();
-          return !d.due && lc ? `<span class="pill p-unknown">Last changed ${niceD(parseD(lc))}</span>` : `<span class="pill p-${d.status}">${relText(d)}</span>`; })() : ''}
+        ${(() => { const lc = [lastOf(u, 'filters'), lastOf(u, 'belts')].filter(Boolean).sort().pop();
+          return !d.due && lc ? `<span class="pill p-unknown">Last changed ${niceD(parseD(lc))}</span>` : `<span class="pill p-${d.status}">${relText(d)}</span>`; })()}
       </div>
       <div class="parts">
         <div class="pg"><h4>Filters</h4><div class="chips">${hasF ? u.filters.map(filterChip).join('') : '<span class="none">None listed</span>'}</div></div>
@@ -277,14 +179,14 @@ function renderUnits() {
       ${schedLine('Filters', lastOf(u, 'filters'), u.filterInterval, hasF)}
       ${schedLine('Belts', lastOf(u, 'belts'), u.beltInterval, hasB)}
       ${u.notes ? `<div class="notes">${esc(u.notes)}</div>` : ''}
-      ${priv ? `<div class="actions">
-        ${priv && hasF ? `<button class="btn sm" data-act="fdone">✓ Filters changed today</button>` : ''}
-        ${priv && hasB ? `<button class="btn sm" data-act="bdone">✓ Belts changed today</button>` : ''}
+      <div class="actions">
+        ${hasF ? `<button class="btn sm" data-act="fdone">✓ Filters changed today</button>` : ''}
+        ${hasB ? `<button class="btn sm" data-act="bdone">✓ Belts changed today</button>` : ''}
         <span class="spacer"></span>
         <button class="btn sm" data-act="dup">Duplicate</button>
         <button class="btn sm" data-act="edit">Edit</button>
         <button class="btn sm danger" data-act="del">Delete</button>
-      </div>` : ''}
+      </div>
     </article>`;
   }).join('');
 }
@@ -325,9 +227,9 @@ function renderTotals() {
       <td class="mono">${esc(e.size)}</td><td>${esc(e.kind) || '—'}</td>
       <td class="units-col" title="${esc([...e.units].join(', '))}">${e.units.size ? `${e.units.size} unit${e.units.size === 1 ? '' : 's'}<small>${esc([...e.units].slice(0, 6).join(', '))}${e.units.size > 6 ? '…' : ''}</small>` : '—'}</td>
       <td class="num">${qtyCell(e.use, e.kind)}</td>
-      <td style="text-align:right">${priv ? `<input class="stock-in" type="number" min="0" inputmode="numeric" value="${e.stock}" data-key="${esc(e.key)}" aria-label="In stock ${esc(e.size)} ${esc(e.kind)}">` : `<b>${num(e.stock)}</b>`}</td>
+      <td style="text-align:right"><input class="stock-in" type="number" min="0" inputmode="numeric" value="${e.stock}" data-key="${esc(e.key)}" aria-label="In stock ${esc(e.size)} ${esc(e.kind)}"></td>
       <td class="num ${e.order ? 'order-yes' : 'order-no'}">${e.order ? qtyCell(e.order, e.kind) : '✓'}</td>
-      <td>${e.spare && priv ? `<button class="btn ghost sm" data-rmstock="${esc(e.key)}" title="Remove">✕</button>` : ''}</td>
+      <td>${e.spare ? `<button class="btn ghost sm" data-rmstock="${esc(e.key)}" title="Remove">✕</button>` : ''}</td>
     </tr>`).join('')}
   </tbody></table>`;
 }
@@ -340,7 +242,7 @@ function setStock(key, qty) {
 
 /* Parts list: filters + belts for units in scope */
 function partsData() {
-  const scope = priv ? $('#pScope').value : 'all';
+  const scope = $('#pScope').value;
   const sel = S.units.filter(u => {
     if (scope === 'all') return true;
     const d = unitDue(u); if (!d.due) return false;
@@ -391,8 +293,8 @@ function renderNotes() {
       <span>${niceD(parseD(n.date))}</span>
       ${n.unit ? `<span class="chip">${esc(n.unit)}</span>` : ''}
       <span class="spacer"></span>
-      ${priv ? `<button class="btn sm" data-nact="edit">Edit</button>
-      <button class="btn sm danger" data-nact="del">Delete</button>` : ''}
+      <button class="btn sm" data-nact="edit">Edit</button>
+      <button class="btn sm danger" data-nact="del">Delete</button>
     </div>
     <div class="note-text">${esc(n.text)}</div>
   </article>`).join('');
@@ -449,7 +351,7 @@ function editUnit(id, copyFrom) {
           <button type="button" class="btn sm" id="addF">+ Add filter size</button>
           <div class="grid" style="margin-top:12px">
             <div class="f c3"><label>Change every (months)</label><input type="number" min="0" step="0.5" name="filterInterval" value="${esc(u.filterInterval)}"></div>
-            <div class="f c3 priv-only"><label>🔒 Last changed (private)</label><input type="date" name="filterLast" value="${esc(id ? lastOf(u, 'filters') : '')}"></div>
+            <div class="f c3"><label>Last changed</label><input type="date" name="filterLast" value="${esc(u.filterLast)}"></div>
           </div>
         </fieldset>
         <fieldset><legend>Belts</legend>
@@ -457,7 +359,7 @@ function editUnit(id, copyFrom) {
           <button type="button" class="btn sm" id="addB">+ Add belt</button>
           <div class="grid" style="margin-top:12px">
             <div class="f c3"><label>Change every (months)</label><input type="number" min="0" step="0.5" name="beltInterval" value="${esc(u.beltInterval)}"></div>
-            <div class="f c3 priv-only"><label>🔒 Last changed (private)</label><input type="date" name="beltLast" value="${esc(id ? lastOf(u, 'belts') : '')}"></div>
+            <div class="f c3"><label>Last changed</label><input type="date" name="beltLast" value="${esc(u.beltLast)}"></div>
           </div>
           <p class="hint">Leave belts empty for direct-drive units.</p>
         </fieldset>
@@ -489,14 +391,9 @@ function editUnit(id, copyFrom) {
     })).filter(b => b.size);
     const rec = {
       id: id || uid(), name: v('name'), type: v('type'), location: v('location'), make: v('make'), model: v('model'),
-      filters, belts, filterInterval: v('filterInterval'), beltInterval: v('beltInterval'), cooling, notes: form.elements.notes.value.trim()
+      filters, belts, filterInterval: v('filterInterval'), filterLast: v('filterLast'), beltInterval: v('beltInterval'), beltLast: v('beltLast'), cooling, notes: form.elements.notes.value.trim()
     };
     if (id) S.units = S.units.map(x => x.id === id ? rec : x); else S.units.push(rec);
-    if (priv) {
-      const fl = v('filterLast'), bl = v('beltLast');
-      if (fl && fl !== lastOf(rec, 'filters') && filters.length) addHistory(rec, 'filters', fl);
-      if (bl && bl !== lastOf(rec, 'belts') && belts.length) addHistory(rec, 'belts', bl);
-    }
     closeModal(); render(); persist();
   };
 }
@@ -554,12 +451,12 @@ $('#list').addEventListener('click', e => {
   const id = btn.closest('.unit').dataset.id, u = S.units.find(x => x.id === id);
   if (act === 'edit') editUnit(id);
   else if (act === 'dup') editUnit(null, u);
-  else if (act === 'fdone') addHistory(u, 'filters', fmtD(today()));
-  else if (act === 'bdone') addHistory(u, 'belts', fmtD(today()));
+  else if (act === 'fdone') markChanged(u, 'filters', fmtD(today()));
+  else if (act === 'bdone') markChanged(u, 'belts', fmtD(today()));
   else if (act === 'del') confirmBox('Delete unit?', `<p style="margin:0">Remove <b>${esc(u.name)}</b> and its filter and belt info?</p>`, 'Delete', () => { S.units = S.units.filter(x => x.id !== id); render(); persist(); });
 });
 $('#addBtn').onclick = () => editUnit();
-['q', 'fType', 'fStatus', 'fCool', 'sort', 'pScope', 'tq', 'tShort', 'nq', 'hq', 'hPart'].forEach(i => $('#' + i).addEventListener('input', render));
+['q', 'fType', 'fStatus', 'fCool', 'sort', 'pScope', 'tq', 'tShort', 'nq'].forEach(i => $('#' + i).addEventListener('input', render));
 $('#backupBtn').onclick = backupBox;
 
 $('#totals').addEventListener('change', e => {
@@ -610,10 +507,6 @@ $('#notesList').addEventListener('click', e => {
 });
 document.querySelectorAll('.subtab').forEach(t => t.onclick = () => go('notes-' + t.dataset.nt));
 
-$('#history').addEventListener('click', e => {
-  const b = e.target.closest('[data-hdel]'); if (!b) return;
-  confirmBox('Delete history entry?', '<p style="margin:0">This removes that change from the history. The unit’s next-due date will be worked out from the remaining entries.</p>', 'Delete', () => deleteHistory(b.dataset.hdel));
-});
 
 /* tabs, with #units / #totals / #parts / #notes-cooling / #notes-heating links */
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => go(t.dataset.view === 'notes' ? 'notes-' + noteTab : t.dataset.view));
@@ -621,7 +514,6 @@ document.querySelectorAll('.stat').forEach(s => s.onclick = () => {
   const k = s.dataset.stat;
   $('#fStatus').value = (k === 'overdue' || k === 'soon') ? k : '';
   $('#q').value = ''; $('#fType').value = ''; $('#fCool').value = '';
-  if (k === 'cool') { $('#fCool').value = 'set'; $('#sort').value = 'cool'; }
   go('units');
 });
 function go(name) { if (location.hash.slice(1) === name) route(); else location.hash = name; }
@@ -629,10 +521,9 @@ function route() {
   const h = location.hash.slice(1);
   if (h === 'notes-cooling' || h === 'notes-heating') { view = 'notes'; noteTab = h.slice(6); }
   else if (h === 'notes') view = 'notes';
-  else if (h === 'history' && priv) view = 'history';
   else view = ['units', 'totals', 'parts'].includes(h) ? h : 'units';
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === view)));
-  ['units', 'totals', 'parts', 'notes', 'history'].forEach(v => { $('#view-' + v).hidden = v !== view; });
+  ['units', 'totals', 'parts', 'notes'].forEach(v => { $('#view-' + v).hidden = v !== view; });
   render();
 }
 window.addEventListener('hashchange', route);

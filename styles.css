@@ -166,9 +166,3 @@ tr.stock-only td:first-child::after{content:"spare";margin-left:6px;font:600 10p
 .c-low .cool-bar i{background:#d0582a} .c-low b{color:#c2410c}
 .c-none b{color:var(--bad)}
 .c-na b{color:var(--unk)}
-
-/* ---------- Private vs public view ---------- */
-body:not(.is-private) .priv-only{display:none !important}
-body.is-private .pub-only{display:none !important}
-.lock{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--accent);background:#e8f2fb;border:1px solid #c5ddf3;border-radius:999px;padding:2px 10px}
-.hist-table td{vertical-align:middle}
