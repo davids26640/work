@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filter &amp; Belt Tracker</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="18" fill="none" stroke="#0072ce" stroke-width="2.5"/>
+          <path d="M11 14h18M11 20h18M11 26h18" stroke="#111418" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M15 12v16M20 12v16M25 12v16" stroke="#0072ce" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
+        </svg>
+        <div>
+          <h1>Filter &amp; Belt Tracker</h1>
+          <p>Air handlers, rooftop units &amp; everything else with a filter rack</p>
+        </div>
+      </div>
+      <span class="lock priv-only" title="Only you and Editors can see change dates and history">🔒 Private view — change history visible</span>
+      <div class="save" id="save"><span class="dot"></span><span id="saveText">Loading…</span></div>
+    </div>
+    <div class="stats">
+      <button class="stat" data-stat="all"><b id="stUnits">0</b><span>Units</span></button>
+      <button class="stat bad priv-only" data-stat="overdue"><b id="stOver">0</b><span>Overdue</span></button>
+      <button class="stat soon priv-only" data-stat="soon"><b id="stSoon">0</b><span>Due in 14 days</span></button>
+      <button class="stat pub-only" data-stat="belts"><b id="stBelts">0</b><span>Belts installed</span></button>
+      <button class="stat pub-only" data-stat="cool"><b id="stCool">—</b><span>Avg ash cooling</span></button>
+      <button class="stat" data-stat="filters"><b id="stFilters">0</b><span>Filters installed</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-view="units" aria-selected="true">Units</button>
+    <button class="tab" role="tab" data-view="totals" aria-selected="false">Filter totals</button>
+    <button class="tab" role="tab" data-view="parts" aria-selected="false">Parts list</button>
+    <button class="tab" role="tab" data-view="notes" aria-selected="false">Notes</button>
+    <button class="tab priv-only" role="tab" data-view="history" aria-selected="false">🔒 Change history</button>
+  </div>
+
+  <!-- Units -->
+  <section id="view-units">
+    <div class="toolbar">
+      <input class="grow" type="search" id="q" placeholder="Search unit, location, filter size, belt…">
+      <select id="fType"><option value="">All types</option></select>
+      <select id="fStatus" class="priv-only">
+        <option value="">Any status</option>
+        <option value="overdue">Overdue</option>
+        <option value="soon">Due in 14 days</option>
+        <option value="ok">Up to date</option>
+        <option value="unknown">No date set</option>
+      </select>
+      <select id="fCool">
+        <option value="">Any cooling</option>
+        <option value="set">Has a cooling %</option>
+        <option value="full">100% cooling</option>
+        <option value="part">Partial (1–99%)</option>
+        <option value="none">0% cooling</option>
+        <option value="na">Cooling N/A</option>
+      </select>
+      <select id="sort">
+        <option value="due">Sort: next due</option>
+        <option value="name">Sort: name</option>
+        <option value="loc">Sort: location</option>
+        <option value="cool">Sort: cooling (lowest first)</option>
+      </select>
+      <button class="btn primary priv-only" id="addBtn">+ Add unit</button>
+    </div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <!-- Filter totals -->
+  <section id="view-totals" hidden>
+    <div class="tiles">
+      <div class="tile"><b id="tSizes">0</b><span>Filter sizes</span></div>
+      <div class="tile"><b id="tUse">0</b><span>Needed for a full change</span></div>
+      <div class="tile"><b id="tStock">0</b><span>In stock</span></div>
+      <div class="tile short"><b id="tOrder">0</b><span>Short / to order</span></div>
+    </div>
+    <div class="toolbar">
+      <input class="grow" type="search" id="tq" placeholder="Search size or type…">
+      <label class="check"><input type="checkbox" id="tShort"> Only show what we're short on</label>
+      <button class="btn" id="copyOrder">Copy order list</button>
+    </div>
+    <div id="totals"></div>
+    <form class="addstock priv-only" id="addStock">
+      <h4>Add a spare filter size we keep in stock (not used in any unit yet)</h4>
+      <div class="f"><label>Size</label><input type="text" name="size" placeholder="20x20x4" required></div>
+      <div class="f"><label>Type</label><input type="text" name="kind" list="kindList" placeholder="Pleated" value="Pleated"></div>
+      <div class="f"><label>In stock</label><input type="number" min="0" name="qty" value="0"></div>
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <p class="hint">Counts are individual filters. Bags come 5 per box. "Needed" is how many it takes to change every filter in every unit once.</p>
+  </section>
+
+  <!-- Parts list -->
+  <section id="view-parts" hidden>
+    <div class="toolbar">
+      <label for="pScope" class="priv-only" style="font-weight:600;font-size:14px">Include</label>
+      <select id="pScope" class="priv-only">
+        <option value="all">All units</option>
+        <option value="30">Units due within 30 days</option>
+        <option value="14">Units due within 14 days</option>
+        <option value="overdue">Overdue units only</option>
+      </select>
+      <span class="grow"></span>
+      <button class="btn" id="copyParts">Copy list</button>
+      <button class="btn priv-only" id="backupBtn">Backup / restore</button>
+    </div>
+    <div id="parts"></div>
+  </section>
+
+  <!-- Change history (private: owner + Editors only) -->
+  <section id="view-history" hidden>
+    <div class="toolbar">
+      <input class="grow" type="search" id="hq" placeholder="Search unit…">
+      <select id="hPart"><option value="">Filters &amp; belts</option><option value="filters">Filters only</option><option value="belts">Belts only</option></select>
+    </div>
+    <p class="hint">Every time filters or belts are marked as changed. Only you and people you share with as Editor can see this. Viewers never see change dates.</p>
+    <div id="history"></div>
+  </section>
+
+  <!-- Notes -->
+  <section id="view-notes" hidden>
+    <div class="subtabs" role="tablist">
+      <button class="subtab" role="tab" data-nt="cooling" aria-selected="true"><span class="sw"></span>Cooling <span class="count" id="cCool">0</span></button>
+      <button class="subtab" role="tab" data-nt="heating" aria-selected="false"><span class="sw"></span>Heating <span class="count" id="cHeat">0</span></button>
+    </div>
+    <form class="note-form" id="noteForm">
+      <textarea name="text" class="priv-only" placeholder="Write a cooling note…" required></textarea>
+      <input type="text" name="unit" class="priv-only" list="unitList" placeholder="Unit (optional)">
+      <input type="search" id="nq" placeholder="Search notes…">
+      <div class="nf-foot priv-only"><button class="btn primary" type="submit">Add note</button></div>
+    </form>
+    <div class="notes-list" id="notesList"></div>
+  </section>
+</main>
+
+<datalist id="kindList"><option>Pleated</option><option>Poly</option><option>Bag (5 per box)</option><option>Flame filter pleat</option><option>Filter roll</option></datalist>
+<datalist id="unitList"></datalist>
+<datalist id="coolList"><option>100</option><option>75</option><option>50</option><option>25</option><option>0</option><option>N/A</option></datalist>
+<div id="modal" role="dialog" aria-modal="true"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
