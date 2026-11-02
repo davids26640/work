@@ -189,3 +189,12 @@ body.public .edit-only{display:none !important}
 body:not(.public) .public-only{display:none !important}
 .top-right{display:flex;align-items:center;gap:12px}
 ol.steps{margin:0 0 12px;padding-left:20px} ol.steps li{margin:3px 0}
+
+/* ---------- Data plate ---------- */
+details.plate{margin-top:10px;border:1px solid var(--line);border-radius:6px;background:#fafbfc}
+details.plate summary{cursor:pointer;padding:7px 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+details.plate[open] summary{border-bottom:1px solid var(--line)}
+details.plate dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0;padding:9px 12px;font-size:13px}
+details.plate dt{color:var(--muted)}
+details.plate dd{margin:0;word-break:break-all}
+details.plate dd.mono{font-family:var(--mono)}

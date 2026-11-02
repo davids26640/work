@@ -193,6 +193,13 @@ function coolLine(u) {
   const pct = v === 'N/A' ? 0 : Math.max(0, Math.min(100, v));
   return `<div class="cool c-${coolClass(v)}"><span class="cool-lbl">Cooling capacity</span><span class="cool-bar"><i style="width:${pct}%"></i></span><b>${v === 'N/A' ? 'N/A' : v + '%'}</b></div>`;
 }
+const PLATE = [['serial', 'Serial'], ['coolingSize', 'Cooling size'], ['heatingInput', 'Heating input'],
+  ['refrigerant', 'Refrigerant'], ['refCharge', 'Refrigerant charge'], ['mfgDate', 'Manufactured']];
+function plateBlock(u) {
+  const rows = [['Make', u.make], ['Model', u.model], ...PLATE.map(([k, l]) => [l, u[k]])].filter(([, v]) => v);
+  if (!PLATE.some(([k]) => u[k])) return '';
+  return `<details class="plate"><summary>Data plate</summary><dl>${rows.map(([l, v]) => `<dt>${esc(l)}</dt><dd${/^(Model|Serial)$/.test(l) ? ' class="mono"' : ''}>${esc(v)}</dd>`).join('')}</dl></details>`;
+}
 function filterChip(f) {
   const extra = [f.merv ? 'MERV ' + f.merv : '', f.kind].filter(Boolean).join(' · ');
   return `<span class="chip">${esc(f.size || '?')} ×${esc(f.qty || 1)}${extra ? `<small>${esc(extra)}</small>` : ''}</span>`;
@@ -210,6 +217,7 @@ function schedLine(label, last, months, has) {
 function searchText(u) {
   const cv = coolVal(u);
   return [cv === null ? '' : 'cooling ' + cv + (cv === 'N/A' ? '' : '%'), u.route, u.name, u.type, TYPE_NAMES[u.type], u.location, u.make, u.model, u.notes,
+    u.serial, u.refrigerant, u.coolingSize,
     ...(u.filters || []).flatMap(f => [f.size, f.kind, f.merv && ('merv ' + f.merv)]),
     ...(u.belts || []).flatMap(b => [b.size, b.note])].join(' ').toLowerCase();
 }
@@ -277,6 +285,7 @@ function renderUnits() {
       </div>
       ${schedLine('Filters', lastOf(u, 'filters'), u.filterInterval, hasF)}
       ${schedLine('Belts', lastOf(u, 'belts'), u.beltInterval, hasB)}
+      ${plateBlock(u)}
       ${u.notes ? `<div class="notes">${esc(u.notes)}</div>` : ''}
       ${selectMode || PUBLIC ? '' : `<div class="actions">
         ${hasF ? `<button class="btn sm" data-act="fdone">✓ Filters changed this month</button>` : ''}
@@ -523,6 +532,18 @@ function editUnit(id, copyFrom) {
           </div>
           <p class="hint">Leave belts empty for direct-drive units.</p>
         </fieldset>
+        <fieldset><legend>Data plate</legend>
+          <div class="grid">
+            <div class="f c3"><label>Serial number</label><input type="text" name="serial" value="${esc(u.serial)}"></div>
+            <div class="f c3"><label>Manufactured</label><input type="text" name="mfgDate" value="${esc(u.mfgDate)}" placeholder="2014, Oct 2014…"></div>
+            <div class="f c3"><label>Cooling size</label><input type="text" name="coolingSize" value="${esc(u.coolingSize)}" placeholder="10 tons"></div>
+            <div class="f c3"><label>Heating input</label><input type="text" name="heatingInput" value="${esc(u.heatingInput)}" placeholder="250,000 BTU/h"></div>
+            <div class="f c3"><label>Refrigerant</label><input type="text" name="refrigerant" value="${esc(u.refrigerant)}" placeholder="R-410A" list="refList"></div>
+            <div class="f c3"><label>Refrigerant charge</label><input type="text" name="refCharge" value="${esc(u.refCharge)}" placeholder="12 lb"></div>
+          </div>
+          <p class="hint">Make and model are at the top of this form.</p>
+          <datalist id="refList"><option>R-410A</option><option>R-22</option><option>R-454B</option><option>R-32</option><option>R-407C</option></datalist>
+        </fieldset>
         <div class="f" style="margin-top:14px"><label>Notes</label><textarea name="notes" rows="2" placeholder="Access, ladder needed, filter rack quirks…">${esc(u.notes)}</textarea></div>
         <div class="err" id="ferr"></div>
       </div>
@@ -551,6 +572,7 @@ function editUnit(id, copyFrom) {
     })).filter(b => b.size);
     const rec = {
       id: id || uid(), name: v('name'), type: v('type'), location: v('location'), route: v('route'), make: v('make'), model: v('model'),
+      serial: v('serial'), mfgDate: v('mfgDate'), coolingSize: v('coolingSize'), heatingInput: v('heatingInput'), refrigerant: v('refrigerant'), refCharge: v('refCharge'),
       filters, belts, filterInterval: v('filterInterval'), filterLast: v('filterLast').slice(0, 7), beltInterval: v('beltInterval'), beltLast: v('beltLast').slice(0, 7), cooling, notes: form.elements.notes.value.trim()
     };
     if (id) S.units = S.units.map(x => x.id === id ? rec : x); else S.units.push(rec);

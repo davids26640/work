@@ -2,7 +2,7 @@
    Made with "Copy for GitHub" */
 window.TRACKER_DATA = {
  "public": true,
- "exportedAt": "2026-11-02T15:03:00.637Z",
+ "exportedAt": "2026-11-02T17:57:34.017Z",
  "units": [
   {
    "id": "aupyxah5ch22",
@@ -1771,8 +1771,8 @@ window.TRACKER_DATA = {
    "name": "RTU 08",
    "type": "RTU",
    "location": "",
-   "make": "",
-   "model": "",
+   "make": "Trane",
+   "model": "SFHFC404PR45C5AD6F01AEGKLMPRTU8",
    "filters": [
     {
      "size": "20x25x2",
@@ -1795,7 +1795,13 @@ window.TRACKER_DATA = {
    ],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "serial": "J98M74593",
+   "coolingSize": "40 tons",
+   "heatingInput": "",
+   "refrigerant": "R-22",
+   "refCharge": "47 lb (circuit 1) / 48 lb (circuit 2)",
+   "mfgDate": "1998 (approx.)"
   },
   {
    "id": "to5r4qxfvf1o",
@@ -1832,9 +1838,9 @@ window.TRACKER_DATA = {
    "id": "1ou4cm18mjsf",
    "name": "RTU 10",
    "type": "RTU",
-   "location": "",
-   "make": "",
-   "model": "",
+   "location": "Met Lab",
+   "make": "Trane",
+   "model": "YSC120F4RLA22CC*0B",
    "filters": [
     {
      "size": "20x25x2",
@@ -1846,7 +1852,13 @@ window.TRACKER_DATA = {
    "belts": [],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "serial": "144112340L",
+   "coolingSize": "10 tons (120,000 BTU/h)",
+   "heatingInput": "",
+   "refrigerant": "R-410A",
+   "refCharge": "",
+   "mfgDate": "Oct 2014 (approx.)"
   },
   {
    "id": "4g2qzgyume7y",
@@ -1884,9 +1896,9 @@ window.TRACKER_DATA = {
    "id": "4d3qm7qqwj7l",
    "name": "RTU 25",
    "type": "RTU",
-   "location": "",
-   "make": "",
-   "model": "",
+   "location": "EE",
+   "make": "Trane",
+   "model": "SFHFC404PT45C59D6G01A0DE000KLM0RT0086",
    "filters": [
     {
      "size": "20x25x2",
@@ -1904,15 +1916,21 @@ window.TRACKER_DATA = {
    ],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "serial": "C99C03547",
+   "coolingSize": "40 tons",
+   "heatingInput": "",
+   "refrigerant": "",
+   "refCharge": "",
+   "mfgDate": "1999 (approx.)"
   },
   {
    "id": "f5e7i8lksnc4",
    "name": "RTU 28",
    "type": "RTU",
-   "location": "",
-   "make": "",
-   "model": "",
+   "location": "EE",
+   "make": "Trane",
+   "model": "YCD301C4H0AB",
    "filters": [
     {
      "size": "20x25x2",
@@ -1936,15 +1954,21 @@ window.TRACKER_DATA = {
    ],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "serial": "P15103588D",
+   "coolingSize": "25 tons (300,000 BTU/h)",
+   "heatingInput": "",
+   "refrigerant": "R-22",
+   "refCharge": "24.5 lb (circuit 1) / 24.5 lb (circuit 2)",
+   "mfgDate": ""
   },
   {
    "id": "22rwrfivvkyv",
    "name": "RTU 29",
    "type": "RTU",
-   "location": "",
-   "make": "",
-   "model": "",
+   "location": "EE",
+   "make": "Air Wise",
+   "model": "TBA-300/DX-C8",
    "filters": [
     {
      "size": "24x24x2",
@@ -1962,7 +1986,13 @@ window.TRACKER_DATA = {
    ],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "serial": "CN-1345/HV2",
+   "coolingSize": "",
+   "heatingInput": "375,000 BTU/h max (35,000 min)",
+   "refrigerant": "",
+   "refCharge": "",
+   "mfgDate": ""
   },
   {
    "id": "du3q8wistd6f",
@@ -1989,8 +2019,8 @@ window.TRACKER_DATA = {
    "name": "RTU 15",
    "type": "RTU",
    "location": "Office",
-   "make": "",
-   "model": "",
+   "make": "Trane",
+   "model": "4YCC4036A1070AB",
    "filters": [
     {
      "size": "18x25x2",
@@ -2002,15 +2032,21 @@ window.TRACKER_DATA = {
    "belts": [],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "mfgDate": "Aug 2018",
+   "coolingSize": "3 tons (36,000 BTU/h)",
+   "heatingInput": "70,000 BTU/h",
+   "refrigerant": "R-410A",
+   "refCharge": "7 lb 3 oz",
+   "serial": "183212388L"
   },
   {
    "id": "26za3b25stra",
    "name": "RTU 16",
    "type": "RTU",
    "location": "Conference",
-   "make": "",
-   "model": "",
+   "make": "Trane",
+   "model": "4YCC4036A1070AB",
    "filters": [
     {
      "size": "18x25x2",
@@ -2022,15 +2058,21 @@ window.TRACKER_DATA = {
    "belts": [],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "mfgDate": "Aug 2018",
+   "coolingSize": "3 tons (36,000 BTU/h)",
+   "heatingInput": "70,000 BTU/h",
+   "refrigerant": "R-410A",
+   "refCharge": "7 lb 3 oz",
+   "serial": "183212380L"
   },
   {
    "id": "10bf6mix6j52",
    "name": "RTU 11",
    "type": "RTU",
-   "location": "",
-   "make": "",
-   "model": "",
+   "location": "Shively",
+   "make": "Trane",
+   "model": "YZC072F4RVA23PEB1C1A600020000D1000000000",
    "filters": [
     {
      "size": "20x25x2",
@@ -2042,15 +2084,21 @@ window.TRACKER_DATA = {
    "belts": [],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "serial": "210510171L",
+   "mfgDate": "Feb 2021",
+   "coolingSize": "6 tons (72,000 BTU/h)",
+   "heatingInput": "150,000 BTU/h",
+   "refrigerant": "R-410A",
+   "refCharge": "8.3 lb"
   },
   {
    "id": "oludqrmqcmuj",
    "name": "RTU 101",
    "type": "RTU",
    "location": "",
-   "make": "",
-   "model": "",
+   "make": "Trane",
+   "model": "SFHFC604HF56D8AD9001ALMNKPRT8E",
    "filters": [
     {
      "size": "12x24x2",
@@ -2074,15 +2122,21 @@ window.TRACKER_DATA = {
    ],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "serial": "J96B70594",
+   "coolingSize": "60 tons",
+   "heatingInput": "",
+   "refrigerant": "R-22",
+   "refCharge": "57 lb (circuit 1) / 58 lb (circuit 2)",
+   "mfgDate": "1996 (approx.)"
   },
   {
    "id": "c1mf9iiw7pyh",
    "name": "RTU 102",
    "type": "RTU",
    "location": "",
-   "make": "",
-   "model": "",
+   "make": "Trane",
+   "model": "SFHFC704HF66D8AD9001AKLNRTV8PE",
    "filters": [
     {
      "size": "12x24x2",
@@ -2106,7 +2160,13 @@ window.TRACKER_DATA = {
    ],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": "Bottom coil blown"
+   "notes": "Bottom coil blown",
+   "serial": "J96B70595",
+   "coolingSize": "70 tons",
+   "heatingInput": "",
+   "refrigerant": "R-22",
+   "refCharge": "53 lb (circuit 1) / 54 lb (circuit 2)",
+   "mfgDate": "1996 (approx.)"
   },
   {
    "id": "7sf4r1irxwng",
@@ -2154,9 +2214,9 @@ window.TRACKER_DATA = {
    "id": "jtldsi9wb4q5",
    "name": "RTU-1",
    "type": "RTU",
-   "location": "",
-   "make": "",
-   "model": "",
+   "location": "Cafeteria",
+   "make": "Trane",
+   "model": "YSJ210A4S0L02D0D0A201000000A0000000000D0",
    "filters": [
     {
      "size": "20x24x2",
@@ -2168,15 +2228,21 @@ window.TRACKER_DATA = {
    "belts": [],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "serial": "231910188D",
+   "mfgDate": "May 2023",
+   "coolingSize": "17.5 tons (210,000 BTU/h)",
+   "heatingInput": "250,000 BTU/h",
+   "refrigerant": "R-410A",
+   "refCharge": "14.20 lb"
   },
   {
    "id": "vi5b42dmu0qn",
    "name": "RTU-2",
    "type": "RTU",
-   "location": "",
-   "make": "",
-   "model": "",
+   "location": "Cafeteria",
+   "make": "Trane",
+   "model": "YSJ150A4S0L02D0D0A201000000A0000000000C0",
    "filters": [
     {
      "size": "18x24x2",
@@ -2194,15 +2260,21 @@ window.TRACKER_DATA = {
    "belts": [],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "mfgDate": "Jun 2023",
+   "coolingSize": "12.5 tons (150,000 BTU/h)",
+   "heatingInput": "150,000 BTU/h",
+   "refrigerant": "R-410A",
+   "refCharge": "11.40 lb",
+   "serial": "232114460L"
   },
   {
    "id": "ofdougkilny8",
    "name": "RTU-3",
    "type": "RTU",
-   "location": "",
-   "make": "",
-   "model": "",
+   "location": "Cafeteria",
+   "make": "Trane",
+   "model": "YSJ150A4S0L02D0D0A201000000A0000000000C0",
    "filters": [
     {
      "size": "18x24x2",
@@ -2220,13 +2292,19 @@ window.TRACKER_DATA = {
    "belts": [],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": ""
+   "notes": "",
+   "mfgDate": "Jun 2023",
+   "coolingSize": "12.5 tons (150,000 BTU/h)",
+   "heatingInput": "150,000 BTU/h",
+   "refrigerant": "R-410A",
+   "refCharge": "11.40 lb",
+   "serial": "232114429L"
   },
   {
    "id": "3g1k5044d6dq",
    "name": "RTU-4",
    "type": "RTU",
-   "location": "",
+   "location": "Cafeteria",
    "make": "",
    "model": "",
    "filters": [
@@ -2741,6 +2819,27 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": ""
+  },
+  {
+   "id": "ntlqumdkj1ko",
+   "name": "Gear Lab Liebert",
+   "type": "Other",
+   "location": "",
+   "route": "",
+   "make": "Liebert",
+   "model": "DCSF083-Z",
+   "filters": [],
+   "belts": [],
+   "filterInterval": "",
+   "beltInterval": "",
+   "serial": "C14L2F2940",
+   "mfgDate": "2014 (plate date: L-2014)",
+   "coolingSize": "",
+   "heatingInput": "",
+   "refrigerant": "",
+   "refCharge": "",
+   "cooling": "",
+   "notes": "Condenser (ACCU.0001). Refrigerant charge is listed on the indoor unit."
   }
  ],
  "stock": [
