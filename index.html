@@ -21,12 +21,17 @@
           <p>Air handlers, rooftop units &amp; everything else with a filter rack</p>
         </div>
       </div>
-      <div class="save" id="save"><span class="dot"></span><span id="saveText">Loading…</span></div>
+      <div class="top-right">
+        <button class="btn edit-only" id="githubBtn" title="Make the public, date-free data.js for your GitHub site">⇪ Copy for GitHub</button>
+        <div class="save" id="save"><span class="dot"></span><span id="saveText">Loading…</span></div>
+      </div>
     </div>
     <div class="stats">
       <button class="stat" data-stat="all"><b id="stUnits">0</b><span>Units</span></button>
-      <button class="stat bad" data-stat="overdue"><b id="stOver">0</b><span>Overdue</span></button>
-      <button class="stat soon" data-stat="soon"><b id="stSoon">0</b><span>Due in 14 days</span></button>
+      <button class="stat bad edit-only" data-stat="overdue"><b id="stOver">0</b><span>Overdue</span></button>
+      <button class="stat soon edit-only" data-stat="soon"><b id="stSoon">0</b><span>Due in 14 days</span></button>
+      <button class="stat public-only" data-stat="belts"><b id="stBelts">0</b><span>Belts installed</span></button>
+      <button class="stat public-only" data-stat="cool"><b id="stCool">—</b><span>Avg ash cooling</span></button>
       <button class="stat" data-stat="filters"><b id="stFilters">0</b><span>Filters installed</span></button>
     </div>
   </div>
@@ -36,6 +41,7 @@
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-view="units" aria-selected="true">Units</button>
     <button class="tab" role="tab" data-view="totals" aria-selected="false">Filter totals</button>
+    <button class="tab" role="tab" data-view="belts" aria-selected="false">Belt totals</button>
     <button class="tab" role="tab" data-view="parts" aria-selected="false">Parts list</button>
     <button class="tab" role="tab" data-view="notes" aria-selected="false">Notes</button>
   </div>
@@ -45,7 +51,8 @@
     <div class="toolbar">
       <input class="grow" type="search" id="q" placeholder="Search unit, location, filter size, belt…">
       <select id="fType"><option value="">All types</option></select>
-      <select id="fStatus">
+      <select id="fRoute"><option value="">All routes / groups</option></select>
+      <select id="fStatus" class="edit-only">
         <option value="">Any status</option>
         <option value="overdue">Overdue</option>
         <option value="soon">Due in 14 days</option>
@@ -63,10 +70,20 @@
       <select id="sort">
         <option value="due">Sort: next due</option>
         <option value="name">Sort: name</option>
+        <option value="route">Sort: route / group</option>
         <option value="loc">Sort: location</option>
         <option value="cool">Sort: cooling (lowest first)</option>
       </select>
-      <button class="btn primary" id="addBtn">+ Add unit</button>
+      <button class="btn edit-only" id="selectBtn">Select…</button>
+      <button class="btn primary edit-only" id="addBtn">+ Add unit</button>
+    </div>
+    <div class="bulkbar" id="bulkbar" hidden>
+      <b id="bulkCount">Tap units to select them</b>
+      <button class="btn sm" id="bulkAll">Select all shown</button>
+      <button class="btn sm" id="bulkClear">Clear</button>
+      <span class="spacer"></span>
+      <button class="btn sm primary" id="bulkF">✓ Filters changed today</button>
+      <button class="btn sm primary" id="bulkB">✓ Belts changed today</button>
     </div>
     <div class="list" id="list"></div>
   </section>
@@ -85,21 +102,44 @@
       <button class="btn" id="copyOrder">Copy order list</button>
     </div>
     <div id="totals"></div>
-    <form class="addstock" id="addStock">
+    <form class="addstock edit-only" id="addStock">
       <h4>Add a spare filter size we keep in stock (not used in any unit yet)</h4>
       <div class="f"><label>Size</label><input type="text" name="size" placeholder="20x20x4" required></div>
       <div class="f"><label>Type</label><input type="text" name="kind" list="kindList" placeholder="Pleated" value="Pleated"></div>
       <div class="f"><label>In stock</label><input type="number" min="0" name="qty" value="0"></div>
       <button class="btn" type="submit">Add</button>
     </form>
-    <p class="hint">Counts are individual filters. Bags come 5 per box. "Needed" is how many it takes to change every filter in every unit once.</p>
+    <p class="hint">Counts are individual filters. Bags come 5 per box. "Needed" is how many it takes to change every filter in every unit once. Marking filters changed on a unit takes them out of stock.</p>
+  </section>
+
+  <!-- Belt totals -->
+  <section id="view-belts" hidden>
+    <div class="tiles">
+      <div class="tile"><b id="bSizes">0</b><span>Belt sizes</span></div>
+      <div class="tile"><b id="bUse">0</b><span>Needed for a full change</span></div>
+      <div class="tile"><b id="bStock">0</b><span>In stock</span></div>
+      <div class="tile short"><b id="bOrder">0</b><span>Short / to order</span></div>
+    </div>
+    <div class="toolbar">
+      <input class="grow" type="search" id="bq" placeholder="Search belt size or unit…">
+      <label class="check"><input type="checkbox" id="bShort"> Only show what we're short on</label>
+      <button class="btn" id="copyBeltOrder">Copy order list</button>
+    </div>
+    <div id="btotals"></div>
+    <form class="addstock belt edit-only" id="addBeltStock">
+      <h4>Add a spare belt size we keep in stock (not used in any unit yet)</h4>
+      <div class="f"><label>Belt size / part #</label><input type="text" name="size" placeholder="B75" required></div>
+      <div class="f"><label>In stock</label><input type="number" min="0" name="qty" value="0"></div>
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <p class="hint">"Needed" is how many belts it takes to change every belt in every unit once. Marking belts changed on a unit takes them out of stock.</p>
   </section>
 
   <!-- Parts list -->
   <section id="view-parts" hidden>
     <div class="toolbar">
-      <label for="pScope" style="font-weight:600;font-size:14px">Include</label>
-      <select id="pScope">
+      <label for="pScope" class="edit-only" style="font-weight:600;font-size:14px">Include</label>
+      <select id="pScope" class="edit-only">
         <option value="all">All units</option>
         <option value="30">Units due within 30 days</option>
         <option value="14">Units due within 14 days</option>
@@ -107,7 +147,7 @@
       </select>
       <span class="grow"></span>
       <button class="btn" id="copyParts">Copy list</button>
-      <button class="btn" id="backupBtn">Backup / restore</button>
+      <button class="btn edit-only" id="backupBtn">Backup / restore</button>
     </div>
     <div id="parts"></div>
   </section>
@@ -119,10 +159,10 @@
       <button class="subtab" role="tab" data-nt="heating" aria-selected="false"><span class="sw"></span>Heating <span class="count" id="cHeat">0</span></button>
     </div>
     <form class="note-form" id="noteForm">
-      <textarea name="text" placeholder="Write a cooling note…" required></textarea>
-      <input type="text" name="unit" list="unitList" placeholder="Unit (optional)">
+      <textarea name="text" class="edit-only" placeholder="Write a cooling note…" required></textarea>
+      <input type="text" name="unit" class="edit-only" list="unitList" placeholder="Unit (optional)">
       <input type="search" id="nq" placeholder="Search notes…">
-      <div class="nf-foot"><button class="btn primary" type="submit">Add note</button></div>
+      <div class="nf-foot edit-only"><button class="btn primary" type="submit">Add note</button></div>
     </form>
     <div class="notes-list" id="notesList"></div>
   </section>
@@ -130,8 +170,10 @@
 
 <datalist id="kindList"><option>Pleated</option><option>Poly</option><option>Bag (5 per box)</option><option>Flame filter pleat</option><option>Filter roll</option></datalist>
 <datalist id="unitList"></datalist>
+<datalist id="routeList"></datalist>
 <datalist id="coolList"><option>100</option><option>75</option><option>50</option><option>25</option><option>0</option><option>N/A</option></datalist>
 <div id="modal" role="dialog" aria-modal="true"></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="data.js"></script>
 <script src="app.js"></script>

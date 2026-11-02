@@ -8,6 +8,7 @@
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 *{box-sizing:border-box}
+[hidden]{display:none !important}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--sans)}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -166,3 +167,25 @@ tr.stock-only td:first-child::after{content:"spare";margin-left:6px;font:600 10p
 .c-low .cool-bar i{background:#d0582a} .c-low b{color:#c2410c}
 .c-none b{color:var(--bad)}
 .c-na b{color:var(--unk)}
+
+/* ---------- Bulk select ---------- */
+.bulkbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#e8f2fb;border:1px solid #c5ddf3;border-radius:8px;padding:9px 12px;margin:-4px 0 12px}
+.bulkbar .spacer{flex:1}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.list.selecting .unit{cursor:pointer;user-select:none}
+.list.selecting .unit:hover{border-color:var(--accent)}
+.unit.picked{background:#f2f8fe;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+input.pick{width:20px;height:20px;accent-color:var(--accent);margin:0 2px 0 0;pointer-events:none}
+.addstock.belt{grid-template-columns:2fr .8fr auto}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:10px;max-width:min(680px,calc(100% - 24px));background:var(--head);color:#fff;border-radius:8px;padding:10px 12px 10px 16px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:14px}
+.toast .btn{background:#fff;color:var(--ink);border-color:#fff}
+.toast .btn.ghost{background:transparent;color:#fff;border-color:transparent}
+@media (max-width:720px){ .addstock.belt{grid-template-columns:1fr 1fr} }
+
+/* ---------- Public (GitHub) view-only copy ---------- */
+body.public .edit-only{display:none !important}
+body:not(.public) .public-only{display:none !important}
+.top-right{display:flex;align-items:center;gap:12px}
+ol.steps{margin:0 0 12px;padding-left:20px} ol.steps li{margin:3px 0}

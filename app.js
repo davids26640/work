@@ -3,8 +3,8 @@
 'use strict';
 
 const LS_KEY = 'filter-belt-tracker-v2';
-const TYPES = ['AHU', 'RTU', 'MAU', 'King Heater', 'Other'];
-const TYPE_NAMES = { AHU: 'Air handler', RTU: 'Rooftop unit', MAU: 'Make-up air', 'King Heater': 'King Heater', Other: 'Other' };
+const TYPES = ['ASH', 'AHU', 'RTU', 'MAU', 'King Heater', 'Other'];
+const TYPE_NAMES = { ASH: 'Ash house', AHU: 'Air handler', RTU: 'Rooftop unit', MAU: 'Make-up air', 'King Heater': 'King Heater', Other: 'Other' };
 const typeLabel = t => TYPE_NAMES[t] && TYPE_NAMES[t] !== t ? `${t} — ${TYPE_NAMES[t]}` : t;
 const NOTE_KINDS = { cooling: 'Cooling', heating: 'Heating' };
 
@@ -17,15 +17,61 @@ function normalize(d) {
   if (Array.isArray(d)) d = { units: d };
   if (!d || typeof d !== 'object') d = {};
   const n = d.notes || {};
-  return { units: arr(d.units), stock: arr(d.stock), notes: { cooling: arr(n.cooling), heating: arr(n.heating) } };
+  return { units: arr(d.units), stock: arr(d.stock), beltStock: arr(d.beltStock), notes: { cooling: arr(n.cooling), heating: arr(n.heating) } };
 }
+/* PUBLIC: set when data.js was made with "Copy for GitHub". That copy has no change
+   dates in it, and the site runs view-only: no editing, nothing saved. */
+const PUBLIC = !!(window.TRACKER_DATA && window.TRACKER_DATA.public);
+const EXPORTED_AT = (window.TRACKER_DATA && window.TRACKER_DATA.exportedAt) || '';
 let S = normalize(window.TRACKER_DATA);
 
 let mode = 'local', artifactApi = null, readOnly = false, saveTimer = null;
 let view = 'units', noteTab = 'cooling';
+let selectMode = false, selected = new Set(), lastShown = [], toastTimer = null;
 
 function lastOf(u, part) { return (part === 'belts' ? u.beltLast : u.filterLast) || ''; }
-function markChanged(u, part, date) { if (part === 'belts') u.beltLast = date; else u.filterLast = date; render(); persist(); }
+/* Mark filters or belts changed on one or more units. Takes the parts out of stock
+   (never below 0) and offers Undo. Units already marked today are skipped so a
+   double-click can't take stock twice. */
+function markChanged(list, part, date) {
+  const field = part === 'belts' ? 'beltLast' : 'filterLast';
+  const items = list.filter(u => (part === 'belts' ? u.belts : u.filters || []).length);
+  const todo = items.filter(u => u[field] !== date), skipped = items.length - todo.length;
+  if (!todo.length) { toast(skipped ? `Already marked ${part} changed today.` : `No ${part} listed on ${list.length === 1 ? 'that unit' : 'those units'}.`); return; }
+  const snap = JSON.stringify({ stock: S.stock, beltStock: S.beltStock, dates: todo.map(u => [u.id, u[field]]) });
+  let taken = 0; const short = new Set();
+  todo.forEach(u => {
+    u[field] = date;
+    if (part === 'belts') u.belts.forEach(b => {
+      const k = bkey(b.size); let st = S.beltStock.find(x => bkey(x.size) === k);
+      if (!st) { st = { size: k, qty: 0 }; S.beltStock.push(st); }
+      const q = +b.qty || 0; if (st.qty < q) short.add(k); st.qty = Math.max(0, (+st.qty || 0) - q); taken += q;
+    });
+    else u.filters.forEach(f => {
+      const k = fkey(f.size, f.kind); let st = S.stock.find(x => fkey(x.size, x.kind) === k);
+      if (!st) { st = { size: dispSize(f.size), kind: baseKind(f.kind), qty: 0 }; S.stock.push(st); }
+      const q = +f.qty || 0; if (st.qty < q) short.add(dispSize(f.size) + ' ' + baseKind(f.kind)); st.qty = Math.max(0, (+st.qty || 0) - q); taken += q;
+    });
+  });
+  render(); persist();
+  const who = todo.length === 1 ? todo[0].name : `${todo.length} units`;
+  let msg = `${who}: ${part} marked changed. ${num(taken)} ${part === 'belts' ? 'belt' : 'filter'}${taken === 1 ? '' : 's'} taken out of stock.`;
+  if (skipped) msg += ` ${skipped} already done today.`;
+  if (short.size) msg += ` Not enough in stock for: ${[...short].slice(0, 4).join(', ')}${short.size > 4 ? '…' : ''}.`;
+  toast(msg, () => {
+    const o = JSON.parse(snap); S.stock = o.stock; S.beltStock = o.beltStock;
+    o.dates.forEach(([id, v]) => { const u = S.units.find(x => x.id === id); if (u) u[field] = v; });
+    render(); persist(); toast('Undone.');
+  });
+}
+function toast(msg, undo) {
+  const t = $('#toast'); clearTimeout(toastTimer);
+  t.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button class="btn sm" id="toastUndo">Undo</button>' : ''}<button class="btn ghost sm" id="toastX" title="Close">✕</button>`;
+  t.hidden = false;
+  if (undo) $('#toastUndo').onclick = () => { t.hidden = true; undo(); };
+  $('#toastX').onclick = () => { t.hidden = true; };
+  toastTimer = setTimeout(() => { t.hidden = true; }, undo ? 12000 : 4000);
+}
 
 /* ---------- dates ---------- */
 function parseD(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
@@ -42,6 +88,7 @@ function dueInfo(last, months) {
   return { status: days < 0 ? 'overdue' : days <= 14 ? 'soon' : 'ok', due, days };
 }
 function unitDue(u) {
+  if (PUBLIC) return { status: 'none', due: null, days: null };
   const items = [];
   if ((u.filters || []).length) items.push(dueInfo(lastOf(u, 'filters'), u.filterInterval));
   if ((u.belts || []).length) items.push(dueInfo(lastOf(u, 'belts'), u.beltInterval));
@@ -64,7 +111,35 @@ function dataJs() {
   return '/* Filter & Belt Tracker data. The page rewrites this file when you save. */\n' +
     'window.TRACKER_DATA = ' + JSON.stringify(S, null, 1).replace(/</g, '\\u003c') + ';\n';
 }
+function publicDataJs() {
+  const pub = { public: true, exportedAt: new Date().toISOString(),
+    units: S.units.map(({ filterLast, beltLast, ...u }) => u), stock: S.stock, beltStock: S.beltStock, notes: S.notes };
+  return '/* Filter & Belt Tracker: public copy for GitHub. View-only, with no change dates.\n   Made with "Copy for GitHub" on ' + new Date().toLocaleString() + ' */\n' +
+    'window.TRACKER_DATA = ' + JSON.stringify(pub, null, 1).replace(/</g, '\\u003c') + ';\n';
+}
+function githubBox() {
+  const txt = publicDataJs();
+  openModal(`<div class="dhead"><h2>Copy for GitHub</h2><button class="btn ghost" data-m="cancel">✕</button></div>
+    <div class="dbody">
+      <p style="margin-top:0">This is your <b>data.js</b> for the public GitHub site. It has <b>no change dates</b>, and it turns the site view-only for everyone who opens it.</p>
+      <ol class="steps">
+        <li>Press <b>Copy</b>.</li>
+        <li>On GitHub, open <b>data.js</b> in your repository and click the pencil icon (Edit).</li>
+        <li>Select everything in the file, delete it, and paste.</li>
+        <li>Click <b>Commit changes</b>. The site updates in a minute or two.</li>
+      </ol>
+      <textarea id="ghTxt" rows="8" readonly style="font-family:var(--mono);font-size:12px">${esc(txt)}</textarea>
+      <div class="err" id="ghErr"></div>
+    </div>
+    <div class="dfoot"><button class="btn" data-m="cancel">Close</button><button class="btn primary" id="ghCopy">Copy</button></div>`);
+  modal.querySelectorAll('[data-m=cancel]').forEach(b => b.onclick = closeModal);
+  $('#ghCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText($('#ghTxt').value); $('#ghCopy').textContent = 'Copied ✓'; }
+    catch (e) { $('#ghTxt').select(); $('#ghErr').textContent = 'Copy blocked — the text is selected, press Ctrl/Cmd+C.'; }
+  };
+}
 function persist() {
+  if (PUBLIC) return;
   lsSet();
   if (mode === 'local') { setStatus('Saved in this browser'); return; }
   if (readOnly) { setStatus('View only — changes are not saved', 'warn'); return; }
@@ -86,6 +161,7 @@ async function doPublish() {
   }
 }
 async function initStorage() {
+  if (PUBLIC) { setStatus(EXPORTED_AT ? 'Updated ' + niceD(new Date(EXPORTED_AT)) : 'View only'); return; }
   try { if (window.claude && typeof window.claude.use === 'function') artifactApi = await window.claude.use('artifact'); } catch (e) { artifactApi = null; }
   if (artifactApi) { mode = 'shared'; setStatus('All changes saved'); return; }
   mode = 'local';
@@ -97,6 +173,7 @@ async function initStorage() {
 /* ---------- helpers ---------- */
 function norm(s) { return String(s || '').trim().toLowerCase().replace(/\s*[x×*]\s*/g, 'x').replace(/\s+/g, ''); }
 function dispSize(s) { return /^\s*\d/.test(s || '') ? norm(s) : String(s || '').trim(); }
+function bkey(s) { return String(s || '').trim().toUpperCase().replace(/\s+/g, ''); }
 function baseKind(k) { return String(k || '').split(' · ')[0].trim(); }
 function fkey(size, kind) { return norm(size) + '|' + baseKind(kind).toLowerCase(); }
 const isBag = k => /^bag/i.test(k || '');
@@ -117,6 +194,7 @@ function filterChip(f) {
 function beltChip(b) { return `<span class="chip">${esc(b.size || '?')} ×${esc(b.qty || 1)}${b.note ? `<small>${esc(b.note)}</small>` : ''}</span>`; }
 function schedLine(label, last, months, has) {
   if (!has) return '';
+  if (PUBLIC) return months ? `<div class="sched"><b>${label}:</b> changed every ${esc(months)} mo</div>` : '';
   const i = dueInfo(last, months), parts = [`<b>${label}:</b>`];
   parts.push(last ? 'last ' + niceD(parseD(last)) : 'no last-change date');
   if (months) parts.push(`every ${esc(months)} mo`);
@@ -125,7 +203,7 @@ function schedLine(label, last, months, has) {
 }
 function searchText(u) {
   const cv = coolVal(u);
-  return [cv === null ? '' : 'cooling ' + cv + (cv === 'N/A' ? '' : '%'), u.name, u.type, TYPE_NAMES[u.type], u.location, u.make, u.model, u.notes,
+  return [cv === null ? '' : 'cooling ' + cv + (cv === 'N/A' ? '' : '%'), u.route, u.name, u.type, TYPE_NAMES[u.type], u.location, u.make, u.model, u.notes,
     ...(u.filters || []).flatMap(f => [f.size, f.kind, f.merv && ('merv ' + f.merv)]),
     ...(u.belts || []).flatMap(b => [b.size, b.note])].join(' ').toLowerCase();
 }
@@ -136,40 +214,55 @@ function render() {
   $('#stUnits').textContent = S.units.length;
   $('#stOver').textContent = ds.filter(d => d.status === 'overdue').length;
   $('#stSoon').textContent = ds.filter(d => d.status === 'soon').length;
+  $('#stBelts').textContent = num(S.units.reduce((n, u) => n + (u.belts || []).reduce((a, b) => a + (+b.qty || 0), 0), 0));
+  const cvs = S.units.filter(u => u.type === 'ASH').map(coolVal).filter(v => typeof v === 'number');
+  $('#stCool').textContent = cvs.length ? Math.round(cvs.reduce((a, v) => a + v, 0) / cvs.length) + '%' : '—';
   $('#stFilters').textContent = num(S.units.reduce((n, u) => n + (u.filters || []).reduce((a, f) => a + (+f.qty || 0), 0), 0));
-  ({ units: renderUnits, totals: renderTotals, parts: renderParts, notes: renderNotes })[view]();
+  const routes = [...new Set(S.units.map(u => u.route).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  $('#routeList').innerHTML = routes.map(r => `<option value="${esc(r)}">`).join('');
+  const fr = $('#fRoute'), cur = fr.value;
+  fr.innerHTML = '<option value="">All routes / groups</option>' + routes.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  fr.value = routes.includes(cur) ? cur : '';
+  ({ units: renderUnits, totals: renderTotals, belts: renderBeltTotals, parts: renderParts, notes: renderNotes })[view]();
 }
 
 function renderUnits() {
   const q = $('#q').value.trim().toLowerCase();
-  const ft = $('#fType').value, fs = $('#fStatus').value, fc = $('#fCool').value, sort = $('#sort').value;
+  const ft = $('#fType').value, fs = PUBLIC ? '' : $('#fStatus').value, fc = $('#fCool').value, fr = $('#fRoute').value;
+  let sort = $('#sort').value; if (PUBLIC && sort === 'due') sort = 'name';
   let rows = S.units.map(u => ({ u, d: unitDue(u) }));
   if (q) rows = rows.filter(r => q.split(/\s+/).every(t => searchText(r.u).includes(t)));
   if (ft) rows = rows.filter(r => r.u.type === ft);
+  if (fr) rows = rows.filter(r => r.u.route === fr);
   if (fs) rows = rows.filter(r => r.d.status === fs);
   if (fc) rows = rows.filter(r => { const v = coolVal(r.u);
     return fc === 'set' ? v !== null : fc === 'na' ? v === 'N/A' : typeof v === 'number' && (fc === 'full' ? v >= 100 : fc === 'none' ? v <= 0 : v > 0 && v < 100); });
   const byName = (a, b) => String(a.u.name).localeCompare(String(b.u.name), undefined, { numeric: true });
   if (sort === 'name') rows.sort(byName);
+  else if (sort === 'route') rows.sort((a, b) => String(a.u.route || '~').localeCompare(String(b.u.route || '~'), undefined, { numeric: true }) || byName(a, b));
   else if (sort === 'loc') rows.sort((a, b) => String(a.u.location || '').localeCompare(String(b.u.location || ''), undefined, { numeric: true }) || byName(a, b));
   else if (sort === 'cool') { const cv = r => { const v = coolVal(r.u); return typeof v === 'number' ? v : v === 'N/A' ? 1000 : 2000; }; rows.sort((a, b) => cv(a) - cv(b) || byName(a, b)); }
   else rows.sort((a, b) => (a.d.due ? a.d.due.getTime() : Infinity) - (b.d.due ? b.d.due.getTime() : Infinity) || byName(a, b));
 
+  lastShown = rows.map(r => r.u.id);
+  updateBulkBar();
   const list = $('#list');
+  list.classList.toggle('selecting', selectMode);
   if (!S.units.length) { list.innerHTML = `<div class="empty"><h2>No units yet</h2><p><button class="btn primary" data-act="add">+ Add unit</button></p></div>`; return; }
   if (!rows.length) { list.innerHTML = `<div class="empty"><h2>No matches</h2><p>Nothing fits that search or filter.</p></div>`; return; }
 
   list.innerHTML = rows.map(({ u, d }) => {
-    const meta = [u.location, [u.make, u.model].filter(Boolean).join(' ')].filter(Boolean).map(esc).join(' · ');
+    const meta = [u.route, u.location, [u.make, u.model].filter(Boolean).join(' ')].filter(Boolean).map(esc).join(' · ');
     const hasF = (u.filters || []).length, hasB = (u.belts || []).length;
-    return `<article class="unit s-${d.status}" data-id="${esc(u.id)}">
+    const picked = selectMode && selected.has(u.id);
+    return `<article class="unit s-${d.status}${picked ? ' picked' : ''}" data-id="${esc(u.id)}">
       <div class="uhead">
         <div>
-          <div class="uname"><span class="badge" title="${esc(TYPE_NAMES[u.type] || u.type)}">${esc(u.type || 'Other')}</span><h3>${esc(u.name)}</h3></div>
+          <div class="uname">${selectMode ? `<input type="checkbox" class="pick" ${picked ? 'checked' : ''} aria-label="Select ${esc(u.name)}">` : ''}<span class="badge" title="${esc(TYPE_NAMES[u.type] || u.type)}">${esc(u.type || 'Other')}</span><h3>${esc(u.name)}</h3></div>
           ${meta ? `<div class="meta">${meta}</div>` : ''}
           ${coolLine(u)}
         </div>
-        ${(() => { const lc = [lastOf(u, 'filters'), lastOf(u, 'belts')].filter(Boolean).sort().pop();
+        ${PUBLIC ? '' : (() => { const lc = [lastOf(u, 'filters'), lastOf(u, 'belts')].filter(Boolean).sort().pop();
           return !d.due && lc ? `<span class="pill p-unknown">Last changed ${niceD(parseD(lc))}</span>` : `<span class="pill p-${d.status}">${relText(d)}</span>`; })()}
       </div>
       <div class="parts">
@@ -179,14 +272,14 @@ function renderUnits() {
       ${schedLine('Filters', lastOf(u, 'filters'), u.filterInterval, hasF)}
       ${schedLine('Belts', lastOf(u, 'belts'), u.beltInterval, hasB)}
       ${u.notes ? `<div class="notes">${esc(u.notes)}</div>` : ''}
-      <div class="actions">
+      ${selectMode || PUBLIC ? '' : `<div class="actions">
         ${hasF ? `<button class="btn sm" data-act="fdone">✓ Filters changed today</button>` : ''}
         ${hasB ? `<button class="btn sm" data-act="bdone">✓ Belts changed today</button>` : ''}
         <span class="spacer"></span>
         <button class="btn sm" data-act="dup">Duplicate</button>
         <button class="btn sm" data-act="edit">Edit</button>
         <button class="btn sm danger" data-act="del">Delete</button>
-      </div>
+      </div>`}
     </article>`;
   }).join('');
 }
@@ -227,9 +320,9 @@ function renderTotals() {
       <td class="mono">${esc(e.size)}</td><td>${esc(e.kind) || '—'}</td>
       <td class="units-col" title="${esc([...e.units].join(', '))}">${e.units.size ? `${e.units.size} unit${e.units.size === 1 ? '' : 's'}<small>${esc([...e.units].slice(0, 6).join(', '))}${e.units.size > 6 ? '…' : ''}</small>` : '—'}</td>
       <td class="num">${qtyCell(e.use, e.kind)}</td>
-      <td style="text-align:right"><input class="stock-in" type="number" min="0" inputmode="numeric" value="${e.stock}" data-key="${esc(e.key)}" aria-label="In stock ${esc(e.size)} ${esc(e.kind)}"></td>
+      <td style="text-align:right">${PUBLIC ? `<b>${num(e.stock)}</b>` : `<input class="stock-in" type="number" min="0" inputmode="numeric" value="${e.stock}" data-key="${esc(e.key)}" aria-label="In stock ${esc(e.size)} ${esc(e.kind)}">`}</td>
       <td class="num ${e.order ? 'order-yes' : 'order-no'}">${e.order ? qtyCell(e.order, e.kind) : '✓'}</td>
-      <td>${e.spare ? `<button class="btn ghost sm" data-rmstock="${esc(e.key)}" title="Remove">✕</button>` : ''}</td>
+      <td>${e.spare && !PUBLIC ? `<button class="btn ghost sm" data-rmstock="${esc(e.key)}" title="Remove">✕</button>` : ''}</td>
     </tr>`).join('')}
   </tbody></table>`;
 }
@@ -240,9 +333,69 @@ function setStock(key, qty) {
   persist();
 }
 
+/* Belt totals: same as filter totals, keyed by belt size */
+function beltTotalsData() {
+  const m = new Map();
+  S.units.forEach(u => (u.belts || []).forEach(b => {
+    const k = bkey(b.size); if (!k) return;
+    const e = m.get(k) || { key: k, size: k, use: 0, stock: 0, units: new Set() };
+    e.use += +b.qty || 0; e.units.add(u.name); m.set(k, e);
+  }));
+  S.beltStock.forEach(st => {
+    const k = bkey(st.size); if (!k) return;
+    let e = m.get(k);
+    if (!e) { e = { key: k, size: k, use: 0, stock: 0, units: new Set(), spare: true }; m.set(k, e); }
+    e.stock = +st.qty || 0;
+  });
+  return [...m.values()].map(e => ({ ...e, order: Math.max(0, e.use - e.stock) }))
+    .sort((a, b) => a.size.localeCompare(b.size, undefined, { numeric: true }));
+}
+function renderBeltTotals() {
+  const all = beltTotalsData();
+  $('#bSizes').textContent = all.length;
+  $('#bUse').textContent = num(all.reduce((a, e) => a + e.use, 0));
+  $('#bStock').textContent = num(all.reduce((a, e) => a + e.stock, 0));
+  $('#bOrder').textContent = num(all.reduce((a, e) => a + e.order, 0));
+  const q = $('#bq').value.trim().toLowerCase(), onlyShort = $('#bShort').checked;
+  let rows = all;
+  if (q) rows = rows.filter(e => (e.size + ' ' + [...e.units].join(' ')).toLowerCase().includes(q));
+  if (onlyShort) rows = rows.filter(e => e.order > 0);
+  const el = $('#btotals');
+  if (!rows.length) { el.innerHTML = `<div class="empty"><h2>${onlyShort ? 'Nothing short' : 'No matches'}</h2><p>${onlyShort ? 'Stock covers a full change of every belt.' : 'Nothing fits that search.'}</p></div>`; return; }
+  el.innerHTML = `<table><thead><tr><th>Belt</th><th class="units-col">Used in</th>
+      <th style="text-align:right">Needed</th><th style="text-align:right">In stock</th><th style="text-align:right">To order</th><th></th></tr></thead><tbody>
+    ${rows.map(e => `<tr class="${e.spare ? 'stock-only' : ''}">
+      <td class="mono">${esc(e.size)}</td>
+      <td class="units-col" title="${esc([...e.units].join(', '))}">${e.units.size ? `${e.units.size} unit${e.units.size === 1 ? '' : 's'}<small>${esc([...e.units].slice(0, 6).join(', '))}${e.units.size > 6 ? '…' : ''}</small>` : '—'}</td>
+      <td class="num">${num(e.use)}</td>
+      <td style="text-align:right">${PUBLIC ? `<b>${num(e.stock)}</b>` : `<input class="stock-in" type="number" min="0" inputmode="numeric" value="${e.stock}" data-belt="1" data-key="${esc(e.key)}" aria-label="In stock ${esc(e.size)}">`}</td>
+      <td class="num ${e.order ? 'order-yes' : 'order-no'}">${e.order ? num(e.order) : '✓'}</td>
+      <td>${e.spare && !PUBLIC ? `<button class="btn ghost sm" data-rmbelt="${esc(e.key)}" title="Remove">✕</button>` : ''}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+function setBeltStock(key, qty) {
+  const s = S.beltStock.find(x => bkey(x.size) === key);
+  if (s) s.qty = qty; else S.beltStock.push({ size: key, qty });
+  persist();
+}
+
+/* Bulk select on the Units tab */
+function updateBulkBar() {
+  const bar = $('#bulkbar');
+  bar.hidden = !selectMode;
+  $('#selectBtn').textContent = selectMode ? 'Done selecting' : 'Select…';
+  $('#selectBtn').classList.toggle('primary', selectMode);
+  if (!selectMode) return;
+  const n = selected.size;
+  $('#bulkCount').textContent = n ? `${n} selected` : 'Tap units to select them';
+  ['#bulkF', '#bulkB', '#bulkClear'].forEach(id => { $(id).disabled = !n; });
+}
+function selectedUnits() { return S.units.filter(u => selected.has(u.id)); }
+
 /* Parts list: filters + belts for units in scope */
 function partsData() {
-  const scope = $('#pScope').value;
+  const scope = PUBLIC ? 'all' : $('#pScope').value;
   const sel = S.units.filter(u => {
     if (scope === 'all') return true;
     const d = unitDue(u); if (!d.due) return false;
@@ -293,8 +446,8 @@ function renderNotes() {
       <span>${niceD(parseD(n.date))}</span>
       ${n.unit ? `<span class="chip">${esc(n.unit)}</span>` : ''}
       <span class="spacer"></span>
-      <button class="btn sm" data-nact="edit">Edit</button>
-      <button class="btn sm danger" data-nact="del">Delete</button>
+      ${PUBLIC ? '' : `<button class="btn sm" data-nact="edit">Edit</button>
+      <button class="btn sm danger" data-nact="del">Delete</button>`}
     </div>
     <div class="note-text">${esc(n.text)}</div>
   </article>`).join('');
@@ -342,6 +495,7 @@ function editUnit(id, copyFrom) {
           <div class="f c2"><label>Unit name / tag *</label><input type="text" name="name" value="${esc(u.name)}" placeholder="RTU-3" autofocus></div>
           <div class="f c2"><label>Type</label><select name="type">${TYPES.map(t => `<option value="${t}"${u.type === t ? ' selected' : ''}>${typeLabel(t)}</option>`).join('')}</select></div>
           <div class="f c2"><label>Location</label><input type="text" name="location" value="${esc(u.location)}" placeholder="Roof, Mezzanine…"></div>
+          <div class="f c2"><label>Route / group</label><input type="text" name="route" list="routeList" value="${esc(u.route)}" placeholder="Route 1, Mezzanine…"></div>
           <div class="f c2"><label>Make</label><input type="text" name="make" value="${esc(u.make)}" placeholder="Carrier, Trane…"></div>
           <div class="f c2"><label>Model #</label><input type="text" name="model" value="${esc(u.model)}"></div>
           <div class="f c2"><label>Cooling capacity (%)</label><input type="text" name="cooling" list="coolList" value="${esc(u.cooling ?? '')}" placeholder="100, 50, 0, N/A…"></div>
@@ -390,7 +544,7 @@ function editUnit(id, copyFrom) {
       qty: Math.max(1, +r.querySelector('[name=bqty]').value || 1), note: r.querySelector('[name=bnote]').value.trim()
     })).filter(b => b.size);
     const rec = {
-      id: id || uid(), name: v('name'), type: v('type'), location: v('location'), make: v('make'), model: v('model'),
+      id: id || uid(), name: v('name'), type: v('type'), location: v('location'), route: v('route'), make: v('make'), model: v('model'),
       filters, belts, filterInterval: v('filterInterval'), filterLast: v('filterLast'), beltInterval: v('beltInterval'), beltLast: v('beltLast'), cooling, notes: form.elements.notes.value.trim()
     };
     if (id) S.units = S.units.map(x => x.id === id ? rec : x); else S.units.push(rec);
@@ -445,30 +599,53 @@ async function copyText(btn, txt, label) {
 
 /* ---------- events ---------- */
 $('#list').addEventListener('click', e => {
+  if (PUBLIC) return;
+  if (selectMode) {
+    const card = e.target.closest('.unit'); if (!card) return;
+    const id = card.dataset.id;
+    if (selected.has(id)) selected.delete(id); else selected.add(id);
+    renderUnits(); return;
+  }
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const act = btn.dataset.act;
   if (act === 'add') return editUnit();
   const id = btn.closest('.unit').dataset.id, u = S.units.find(x => x.id === id);
   if (act === 'edit') editUnit(id);
   else if (act === 'dup') editUnit(null, u);
-  else if (act === 'fdone') markChanged(u, 'filters', fmtD(today()));
-  else if (act === 'bdone') markChanged(u, 'belts', fmtD(today()));
+  else if (act === 'fdone') markChanged([u], 'filters', fmtD(today()));
+  else if (act === 'bdone') markChanged([u], 'belts', fmtD(today()));
   else if (act === 'del') confirmBox('Delete unit?', `<p style="margin:0">Remove <b>${esc(u.name)}</b> and its filter and belt info?</p>`, 'Delete', () => { S.units = S.units.filter(x => x.id !== id); render(); persist(); });
 });
 $('#addBtn').onclick = () => editUnit();
-['q', 'fType', 'fStatus', 'fCool', 'sort', 'pScope', 'tq', 'tShort', 'nq'].forEach(i => $('#' + i).addEventListener('input', render));
+$('#selectBtn').onclick = () => { selectMode = !selectMode; if (!selectMode) selected.clear(); renderUnits(); };
+$('#bulkAll').onclick = () => { lastShown.forEach(id => selected.add(id)); renderUnits(); };
+$('#bulkClear').onclick = () => { selected.clear(); renderUnits(); };
+$('#bulkF').onclick = () => {
+  const list = selectedUnits(), n = list.filter(u => (u.filters || []).length).length;
+  confirmBox('Mark filters changed?', `<p style="margin:0">Mark filters changed today on <b>${n} unit${n === 1 ? '' : 's'}</b> and take their filters out of stock?</p>`, 'Mark changed', () => { markChanged(list, 'filters', fmtD(today())); selected.clear(); selectMode = false; renderUnits(); });
+};
+$('#bulkB').onclick = () => {
+  const list = selectedUnits(), n = list.filter(u => (u.belts || []).length).length;
+  confirmBox('Mark belts changed?', `<p style="margin:0">Mark belts changed today on <b>${n} unit${n === 1 ? '' : 's'}</b> and take their belts out of stock?</p>`, 'Mark changed', () => { markChanged(list, 'belts', fmtD(today())); selected.clear(); selectMode = false; renderUnits(); });
+};
+['q', 'fType', 'fStatus', 'fCool', 'fRoute', 'sort', 'pScope', 'tq', 'tShort', 'bq', 'bShort', 'nq'].forEach(i => $('#' + i).addEventListener('input', render));
 $('#backupBtn').onclick = backupBox;
+$('#githubBtn').onclick = githubBox;
 
-$('#totals').addEventListener('change', e => {
+function onStockChange(e) {
   const inp = e.target.closest('.stock-in'); if (!inp) return;
-  setStock(inp.dataset.key, Math.max(0, Math.round(+inp.value || 0)));
+  const qty = Math.max(0, Math.round(+inp.value || 0));
+  if (inp.dataset.belt) setBeltStock(inp.dataset.key, qty); else setStock(inp.dataset.key, qty);
   setTimeout(() => {   // re-render without losing the field the user tabbed to
     const a = document.activeElement, k = a && a.classList.contains('stock-in') ? a.dataset.key : null;
     render();
     if (k) { const n = document.querySelector(`.stock-in[data-key="${CSS.escape(k)}"]`); if (n) { n.focus(); n.select(); } }
   }, 0);
+}
+['#totals', '#btotals'].forEach(sel => {
+  $(sel).addEventListener('change', onStockChange);
+  $(sel).addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('stock-in')) e.target.blur(); });
 });
-$('#totals').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('stock-in')) e.target.blur(); });
 $('#totals').addEventListener('click', e => {
   const b = e.target.closest('[data-rmstock]'); if (!b) return;
   S.stock = S.stock.filter(s => fkey(s.size, s.kind) !== b.dataset.rmstock); render(); persist();
@@ -481,6 +658,21 @@ $('#addStock').onsubmit = e => {
   const s = S.stock.find(x => fkey(x.size, x.kind) === k);
   if (s) s.qty = qty; else S.stock.push({ size, kind, qty });
   f.reset(); f.elements.kind.value = 'Pleated'; render(); persist();
+};
+$('#btotals').addEventListener('click', e => {
+  const b = e.target.closest('[data-rmbelt]'); if (!b) return;
+  S.beltStock = S.beltStock.filter(st => bkey(st.size) !== b.dataset.rmbelt); render(); persist();
+});
+$('#addBeltStock').onsubmit = e => {
+  e.preventDefault();
+  const f = e.target, size = bkey(f.elements.size.value); if (!size) return;
+  setBeltStock(size, Math.max(0, Math.round(+f.elements.qty.value || 0)));
+  f.reset(); render();
+};
+$('#copyBeltOrder').onclick = () => {
+  const rows = beltTotalsData().filter(e => e.order > 0);
+  const txt = rows.length ? ['BELTS TO ORDER', ...rows.map(e => `${e.order}  ${e.size}`)].join('\n') : 'Nothing to order — stock covers a full change.';
+  copyText($('#copyBeltOrder'), txt, 'Copy order list');
 };
 $('#copyOrder').onclick = () => {
   const rows = totalsData().filter(e => e.order > 0);
@@ -514,6 +706,7 @@ document.querySelectorAll('.stat').forEach(s => s.onclick = () => {
   const k = s.dataset.stat;
   $('#fStatus').value = (k === 'overdue' || k === 'soon') ? k : '';
   $('#q').value = ''; $('#fType').value = ''; $('#fCool').value = '';
+  if (k === 'cool') { $('#fCool').value = 'set'; $('#sort').value = 'cool'; }
   go('units');
 });
 function go(name) { if (location.hash.slice(1) === name) route(); else location.hash = name; }
@@ -521,13 +714,15 @@ function route() {
   const h = location.hash.slice(1);
   if (h === 'notes-cooling' || h === 'notes-heating') { view = 'notes'; noteTab = h.slice(6); }
   else if (h === 'notes') view = 'notes';
-  else view = ['units', 'totals', 'parts'].includes(h) ? h : 'units';
+  else view = ['units', 'totals', 'belts', 'parts'].includes(h) ? h : 'units';
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === view)));
-  ['units', 'totals', 'parts', 'notes'].forEach(v => { $('#view-' + v).hidden = v !== view; });
+  ['units', 'totals', 'belts', 'parts', 'notes'].forEach(v => { $('#view-' + v).hidden = v !== view; });
   render();
 }
 window.addEventListener('hashchange', route);
 
+document.body.classList.toggle('public', PUBLIC);
+if (PUBLIC) { const o = $('#sort option[value=due]'); o.hidden = o.disabled = true; $('#sort').value = 'name'; }
 $('#fType').innerHTML += TYPES.map(t => `<option value="${t}">${typeLabel(t)}</option>`).join('');
 route();
 initStorage();

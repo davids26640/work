@@ -1,11 +1,14 @@
-/* Filter & Belt Tracker data. The page rewrites this file when you save. */
+/* Filter & Belt Tracker: public copy for GitHub. View-only, with no change dates.
+   Made with "Copy for GitHub" */
 window.TRACKER_DATA = {
+ "public": true,
+ "exportedAt": "2026-11-01T22:46:49.640Z",
  "units": [
   {
    "id": "aupyxah5ch22",
    "name": "Ash 1",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -20,13 +23,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 1"
   },
   {
    "id": "j4a0m16olkrv",
    "name": "Ash 2",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -47,13 +51,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Pre roll",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Route 1"
   },
   {
    "id": "7mpyb5svki79",
    "name": "Ash 3",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -74,13 +79,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Good",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Route 1"
   },
   {
    "id": "t9gqrgy4wo4d",
    "name": "Ash 4",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -101,13 +107,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 1"
   },
   {
    "id": "l210aiqhlw54",
    "name": "Ash 5",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -128,13 +135,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Pre",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 1"
   },
   {
    "id": "xwbedahx6yab",
    "name": "Ash 6",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -155,13 +163,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Bags — has bags in the unit",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 1"
   },
   {
    "id": "df8zg4ui52xn",
    "name": "Ash 7",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -182,13 +191,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Bags — has bags in it",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 1"
   },
   {
    "id": "e3stclicj9ad",
    "name": "Ash 8",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -209,13 +219,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Both",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 1"
   },
   {
    "id": "jiipk5qjevv8",
    "name": "Ash 9",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -236,13 +247,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Both",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 1"
   },
   {
    "id": "tthgx3w5us51",
    "name": "Ash 10",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -263,13 +275,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Pre",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 1"
   },
   {
    "id": "cuzixgi8dyxr",
    "name": "Ash 11",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -290,13 +303,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Pre",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Route 1"
   },
   {
    "id": "heegsnyevltz",
    "name": "Ash 12",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -311,13 +325,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 2"
   },
   {
    "id": "dob1xoz82rmy",
    "name": "Ash 13",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -338,13 +353,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Polys dirty. VFD needs pre filters (already in ash).",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Route 2"
   },
   {
    "id": "una78xx5vdbp",
    "name": "Ash 14",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -365,13 +381,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Changed all filters (4-8)",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Route 2"
   },
   {
    "id": "vbtuzmlt3ndh",
    "name": "Ash 15",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -392,13 +409,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Changed all filters (4-8)",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Route 2"
   },
   {
    "id": "fyesegcafgh6",
    "name": "Ash 16",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -419,13 +437,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Needs pleats",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Route 2"
   },
   {
    "id": "kvd7mslhr7ax",
    "name": "Ash 17",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -446,13 +465,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "VFD. Bags only.",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 2"
   },
   {
    "id": "v4j1zqd0dm2s",
    "name": "Ash 18",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -467,13 +487,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 2"
   },
   {
    "id": "9rbbumnl75ck",
    "name": "Ash 19",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -488,13 +509,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "VFD",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 2"
   },
   {
    "id": "bq6nd19qxuxw",
    "name": "Ash 20",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -509,13 +531,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "VFD",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Route 2"
   },
   {
    "id": "lhh6ig2rmb64",
    "name": "Ash 21",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -530,13 +553,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "VFD",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 2"
   },
   {
    "id": "wzhr6y3npqb4",
    "name": "Ash 22",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -551,13 +575,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Route 2"
   },
   {
    "id": "02p49ffnzaly",
    "name": "Ash 23",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -578,13 +603,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Needs pleats",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 2"
   },
   {
    "id": "nnmkh78ypwdc",
    "name": "Ash 24",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -605,13 +631,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": "N/A"
+   "cooling": "N/A",
+   "route": "Route 2"
   },
   {
    "id": "kg8n1c4x01cf",
    "name": "Ash 25",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -632,48 +659,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Needs pleats",
-   "cooling": 100
-  },
-  {
-   "id": "74ffffc2jced",
-   "name": "Ash 26",
-   "type": "AHU",
-   "location": "Roof ash houses",
-   "make": "",
-   "model": "",
-   "filters": [],
-   "belts": [],
-   "filterInterval": "",
-   "beltInterval": "",
-   "notes": "Not used",
-   "cooling": "N/A"
-  },
-  {
-   "id": "8wq8ov31tp5x",
-   "name": "Ash 27",
-   "type": "AHU",
-   "location": "Roof ash houses",
-   "make": "",
-   "model": "",
-   "filters": [
-    {
-     "size": "24x24x24",
-     "qty": 15,
-     "merv": "",
-     "kind": "Bag (5 per box)"
-    }
-   ],
-   "belts": [],
-   "filterInterval": "",
-   "beltInterval": "",
-   "notes": "",
-   "cooling": 0
+   "cooling": 100,
+   "route": "Route 2"
   },
   {
    "id": "fah54gzf5wvs",
    "name": "Ash 36",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -694,13 +687,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Route 3"
   },
   {
    "id": "q1bruvlcaofa",
    "name": "Ash 37",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -721,13 +715,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "No lights. Polys need flame.",
-   "cooling": 25
+   "cooling": 25,
+   "route": "Route 3"
   },
   {
    "id": "r6x3f5183zd1",
    "name": "Ash 38",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -748,13 +743,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Polys need flame.",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Route 3"
   },
   {
    "id": "b7mxl4i84llw",
    "name": "Ash 39",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -769,13 +765,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Route 3"
   },
   {
    "id": "lmx1tfs8gf5h",
    "name": "Ash 40",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [],
@@ -783,13 +780,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Locked out",
-   "cooling": "N/A"
+   "cooling": "N/A",
+   "route": "Route 3"
   },
   {
    "id": "vcjyb3zjxxo3",
    "name": "Ash 41",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -804,13 +802,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Route 3"
   },
   {
    "id": "amruznxgzo48",
    "name": "Ash 42",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -831,13 +830,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Bags need to be done",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Route 3"
   },
   {
    "id": "doz69pyac5hr",
    "name": "Ash 43",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -858,13 +858,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 75
+   "cooling": 75,
+   "route": "Route 3"
   },
   {
    "id": "8vzgc3kmrycg",
    "name": "Ash 44",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -885,13 +886,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 25
+   "cooling": 25,
+   "route": "Route 3"
   },
   {
    "id": "nyhuhtrsog8r",
    "name": "Ash 45",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -906,13 +908,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Down",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Route 3"
   },
   {
    "id": "h404eposcvuh",
    "name": "Ash 46",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -927,13 +930,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 25
+   "cooling": 25,
+   "route": "Route 3"
   },
   {
    "id": "agddnpm3gx7l",
    "name": "Ash 47",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -948,13 +952,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 3"
   },
   {
    "id": "sg00tmls0roy",
    "name": "Ash 48",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -969,13 +974,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Route 3"
   },
   {
    "id": "ju1yt7ugzk52",
    "name": "Ash 49",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -990,13 +996,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Route 3"
   },
   {
    "id": "xz7cuzi0ypl9",
    "name": "Ash 50",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -1011,13 +1018,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 3"
   },
   {
    "id": "lssbo8dhlogt",
    "name": "Ash 51",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -1032,13 +1040,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Route 3"
   },
   {
    "id": "hhkf3j88w3qt",
    "name": "Ash 52",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -1053,13 +1062,14 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Route 3"
   },
   {
    "id": "g7ghicndyccc",
    "name": "Ash 53",
-   "type": "AHU",
-   "location": "Roof ash houses",
+   "type": "ASH",
+   "location": "Roof",
    "make": "",
    "model": "",
    "filters": [
@@ -1074,12 +1084,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Route 3"
   },
   {
    "id": "ghs95tb1ro7y",
    "name": "Ash 101",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1101,12 +1112,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Mezzanine"
   },
   {
    "id": "lf2c7j3zj8z8",
    "name": "Ash 102",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1128,12 +1140,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Mezzanine"
   },
   {
    "id": "fgyr3ml8eo24",
    "name": "Ash 103",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1155,12 +1168,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Mezzanine"
   },
   {
    "id": "h5pgon2gcsmq",
    "name": "Ash 104",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1182,12 +1196,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Mezzanine"
   },
   {
    "id": "qp671lu9cbwu",
    "name": "Ash 105",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1209,12 +1224,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Mezzanine"
   },
   {
    "id": "yqh4bfwog5rn",
    "name": "Ash 106",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1236,12 +1252,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Mezzanine"
   },
   {
    "id": "d918ni16d9mh",
    "name": "Ash 107",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1263,12 +1280,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 50
+   "cooling": 50,
+   "route": "Mezzanine"
   },
   {
    "id": "85ryqb4hedol",
    "name": "Ash 108",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1290,12 +1308,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Mezzanine"
   },
   {
    "id": "56grgb2l94x8",
    "name": "Ash 110",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1317,12 +1336,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Mezzanine"
   },
   {
    "id": "otucam1s617j",
    "name": "Ash 111",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1344,12 +1364,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 100
+   "cooling": 100,
+   "route": "Mezzanine"
   },
   {
    "id": "f84nt3vn9hq3",
    "name": "Ash 112",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1371,12 +1392,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Mezzanine"
   },
   {
    "id": "bnpm6ggiivhw",
    "name": "Ash 115",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1398,12 +1420,13 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Polys changed 7/11",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Mezzanine"
   },
   {
    "id": "lm0juy2s7emq",
    "name": "Ash 116",
-   "type": "AHU",
+   "type": "ASH",
    "location": "Mezzanine",
    "make": "",
    "model": "",
@@ -1425,7 +1448,8 @@ window.TRACKER_DATA = {
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Polys changed 7/11",
-   "cooling": 0
+   "cooling": 0,
+   "route": "Mezzanine"
   },
   {
    "id": "fyiqwzlx39va",
@@ -2224,7 +2248,7 @@ window.TRACKER_DATA = {
    "id": "smw7m842yo51",
    "name": "Sub-11",
    "type": "AHU",
-   "location": "",
+   "location": "Inside plant",
    "make": "",
    "model": "",
    "filters": [
@@ -2250,7 +2274,7 @@ window.TRACKER_DATA = {
    "id": "7hj3y6hquwy2",
    "name": "Sub-12",
    "type": "AHU",
-   "location": "",
+   "location": "Inside plant",
    "make": "",
    "model": "",
    "filters": [
@@ -2479,6 +2503,7 @@ window.TRACKER_DATA = {
    "qty": 12
   }
  ],
+ "beltStock": [],
  "notes": {
   "cooling": [
    {
