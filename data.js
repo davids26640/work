@@ -2,7 +2,7 @@
    Made with "Copy for GitHub" */
 window.TRACKER_DATA = {
  "public": true,
- "exportedAt": "2026-11-01T22:46:49.640Z",
+ "exportedAt": "2026-11-02T12:39:59.444Z",
  "units": [
   {
    "id": "aupyxah5ch22",
@@ -19,7 +19,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -47,7 +53,13 @@ window.TRACKER_DATA = {
      "kind": "Long strip of cloth"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "B81",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Pre roll",
@@ -75,7 +87,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Good",
@@ -103,7 +121,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -131,7 +155,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Pre",
@@ -159,7 +189,13 @@ window.TRACKER_DATA = {
      "kind": "Filter roll"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Bags — has bags in the unit",
@@ -187,7 +223,13 @@ window.TRACKER_DATA = {
      "kind": "Filter roll"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Bags — has bags in it",
@@ -215,7 +257,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Both",
@@ -243,7 +291,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Both",
@@ -271,7 +325,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Pre",
@@ -299,7 +359,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Pre",
@@ -321,7 +387,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "BX96",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -349,7 +421,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "BX96",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Polys dirty. VFD needs pre filters (already in ash).",
@@ -377,7 +455,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "BX96",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Changed all filters (4-8)",
@@ -405,7 +489,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "BX96",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Changed all filters (4-8)",
@@ -433,7 +523,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "BX96",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Needs pleats",
@@ -461,7 +557,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "BX96",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "VFD. Bags only.",
@@ -483,7 +585,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "5VX1000",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -505,7 +613,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "5VX1000",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "VFD",
@@ -527,7 +641,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "5VX1000",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "VFD",
@@ -549,7 +669,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "5VX1000",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "VFD",
@@ -571,7 +697,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "B81",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -599,7 +731,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Needs pleats",
@@ -627,7 +765,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "5VX1500",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -655,7 +799,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Needs pleats",
@@ -683,7 +833,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "C85",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -711,7 +867,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "C85",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "No lights. Polys need flame.",
@@ -739,7 +901,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "C85",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Polys need flame.",
@@ -761,7 +929,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -798,7 +972,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -826,7 +1006,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Bags need to be done",
@@ -854,7 +1040,13 @@ window.TRACKER_DATA = {
      "kind": "Flame filter pleat"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "B93",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -882,7 +1074,13 @@ window.TRACKER_DATA = {
      "kind": "Flame filter pleat"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "C81",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -904,7 +1102,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "C81",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Down",
@@ -926,7 +1130,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX81",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -948,7 +1158,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -970,7 +1186,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -992,7 +1214,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1014,7 +1242,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1036,7 +1270,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1058,7 +1298,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "5V1250",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1080,7 +1326,13 @@ window.TRACKER_DATA = {
      "kind": "Bag (5 per box)"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "5V1250",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1108,7 +1360,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1136,7 +1394,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX109",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1164,7 +1428,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1192,7 +1462,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "B38",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1220,7 +1496,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1248,7 +1530,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1276,7 +1564,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1304,7 +1598,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "CX120",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1332,7 +1632,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "5VX1250",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1360,7 +1666,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "5VX1250",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1388,7 +1700,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "5VX1250",
+     "qty": 1,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "",
@@ -1416,7 +1734,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "B128",
+     "qty": 4,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Polys changed 7/11",
@@ -1444,7 +1768,13 @@ window.TRACKER_DATA = {
      "kind": "Poly"
     }
    ],
-   "belts": [],
+   "belts": [
+    {
+     "size": "B128",
+     "qty": 4,
+     "note": ""
+    }
+   ],
    "filterInterval": "",
    "beltInterval": "",
    "notes": "Polys changed 7/11",
