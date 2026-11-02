@@ -2,13 +2,14 @@
    Made with "Copy for GitHub" */
 window.TRACKER_DATA = {
  "public": true,
- "exportedAt": "2026-11-02T12:39:59.444Z",
+ "exportedAt": "2026-11-02T15:03:00.637Z",
  "units": [
   {
    "id": "aupyxah5ch22",
    "name": "Ash 1",
    "type": "ASH",
    "location": "Roof",
+   "route": "Route 1",
    "make": "",
    "model": "",
    "filters": [
@@ -28,9 +29,8 @@ window.TRACKER_DATA = {
    ],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": "",
    "cooling": 100,
-   "route": "Route 1"
+   "notes": ""
   },
   {
    "id": "j4a0m16olkrv",
@@ -940,21 +940,6 @@ window.TRACKER_DATA = {
    "beltInterval": "",
    "notes": "",
    "cooling": 0,
-   "route": "Route 3"
-  },
-  {
-   "id": "lmx1tfs8gf5h",
-   "name": "Ash 40",
-   "type": "ASH",
-   "location": "Roof",
-   "make": "",
-   "model": "",
-   "filters": [],
-   "belts": [],
-   "filterInterval": "",
-   "beltInterval": "",
-   "notes": "Locked out",
-   "cooling": "N/A",
    "route": "Route 3"
   },
   {
@@ -2148,7 +2133,8 @@ window.TRACKER_DATA = {
    "name": "Leibert 2",
    "type": "Other",
    "location": "",
-   "make": "",
+   "route": "",
+   "make": "Liebert",
    "model": "",
    "filters": [
     {
@@ -2161,6 +2147,7 @@ window.TRACKER_DATA = {
    "belts": [],
    "filterInterval": "",
    "beltInterval": "",
+   "cooling": "",
    "notes": ""
   },
   {

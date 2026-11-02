@@ -31,13 +31,13 @@ let selectMode = false, selected = new Set(), lastShown = [], toastTimer = null;
 
 function lastOf(u, part) { return (part === 'belts' ? u.beltLast : u.filterLast) || ''; }
 /* Mark filters or belts changed on one or more units. Takes the parts out of stock
-   (never below 0) and offers Undo. Units already marked today are skipped so a
+   (never below 0) and offers Undo. Units already marked this month are skipped so a
    double-click can't take stock twice. */
 function markChanged(list, part, date) {
   const field = part === 'belts' ? 'beltLast' : 'filterLast';
   const items = list.filter(u => (part === 'belts' ? u.belts : u.filters || []).length);
-  const todo = items.filter(u => u[field] !== date), skipped = items.length - todo.length;
-  if (!todo.length) { toast(skipped ? `Already marked ${part} changed today.` : `No ${part} listed on ${list.length === 1 ? 'that unit' : 'those units'}.`); return; }
+  const todo = items.filter(u => monthIdx(u[field]) !== monthIdx(date)), skipped = items.length - todo.length;
+  if (!todo.length) { toast(skipped ? `Already marked ${part} changed this month.` : `No ${part} listed on ${list.length === 1 ? 'that unit' : 'those units'}.`); return; }
   const snap = JSON.stringify({ stock: S.stock, beltStock: S.beltStock, dates: todo.map(u => [u.id, u[field]]) });
   let taken = 0; const short = new Set();
   todo.forEach(u => {
@@ -56,7 +56,7 @@ function markChanged(list, part, date) {
   render(); persist();
   const who = todo.length === 1 ? todo[0].name : `${todo.length} units`;
   let msg = `${who}: ${part} marked changed. ${num(taken)} ${part === 'belts' ? 'belt' : 'filter'}${taken === 1 ? '' : 's'} taken out of stock.`;
-  if (skipped) msg += ` ${skipped} already done today.`;
+  if (skipped) msg += ` ${skipped} already done this month.`;
   if (short.size) msg += ` Not enough in stock for: ${[...short].slice(0, 4).join(', ')}${short.size > 4 ? '…' : ''}.`;
   toast(msg, () => {
     const o = JSON.parse(snap); S.stock = o.stock; S.beltStock = o.beltStock;
@@ -78,28 +78,34 @@ function parseD(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return
 function fmtD(d) { return d ? d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') : ''; }
 function niceD(d) { return d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'; }
 function today() { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
-function addMonths(d, n) { const r = new Date(d.getFullYear(), d.getMonth() + n, 1); const last = new Date(r.getFullYear(), r.getMonth() + 1, 0).getDate(); r.setDate(Math.min(d.getDate(), last)); return r; }
-function daysUntil(d) { return Math.round((d - today()) / 86400000); }
+/* Change dates are kept as month + year ("2026-11"). Older full dates still read fine. */
+function monthIdx(s) { const m = /^(\d{4})-(\d{2})/.exec(s || ''); return m ? +m[1] * 12 + (+m[2] - 1) : null; }
+function thisMonth() { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); }
+function fmtMonth(idx) { return idx == null ? '—' : new Date(Math.floor(idx / 12), idx % 12, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }); }
+function niceMonth(s) { return fmtMonth(monthIdx(s)); }
 
+/* due = the month it should be changed. "soon" = due this month.
+   Overdue only once a full month has passed after the due month. */
 function dueInfo(last, months) {
-  const l = parseD(last), m = Number(months);
-  if (!l || !m) return { status: 'unknown', due: null, days: null };
-  const due = addMonths(l, m), days = daysUntil(due);
-  return { status: days < 0 ? 'overdue' : days <= 14 ? 'soon' : 'ok', due, days };
+  const l = monthIdx(last), m = Math.round(Number(months));
+  if (l == null || !m) return { status: 'unknown', due: null, late: null };
+  const due = l + m, late = monthIdx(thisMonth()) - due;
+  return { status: late >= 1 ? 'overdue' : late === 0 ? 'soon' : 'ok', due, late };
 }
 function unitDue(u) {
-  if (PUBLIC) return { status: 'none', due: null, days: null };
+  if (PUBLIC) return { status: 'none', due: null, late: null };
   const items = [];
   if ((u.filters || []).length) items.push(dueInfo(lastOf(u, 'filters'), u.filterInterval));
   if ((u.belts || []).length) items.push(dueInfo(lastOf(u, 'belts'), u.beltInterval));
-  const known = items.filter(i => i.due).sort((a, b) => a.due - b.due);
+  const known = items.filter(i => i.due != null).sort((a, b) => a.due - b.due);
   return known[0] || { status: 'unknown', due: null, days: null };
 }
 function relText(i) {
-  if (!i.due) return 'No date set';
-  if (i.days < 0) return `Overdue ${-i.days} day${i.days === -1 ? '' : 's'}`;
-  if (i.days === 0) return 'Due today';
-  return `Due in ${i.days} day${i.days === 1 ? '' : 's'}`;
+  if (i.due == null) return 'No date set';
+  if (i.late >= 1) return `Overdue · was due ${fmtMonth(i.due)}`;
+  if (i.late === 0) return 'Due this month';
+  if (i.late === -1) return 'Due next month';
+  return `Due ${fmtMonth(i.due)}`;
 }
 
 /* ---------- saving ---------- */
@@ -196,9 +202,9 @@ function schedLine(label, last, months, has) {
   if (!has) return '';
   if (PUBLIC) return months ? `<div class="sched"><b>${label}:</b> changed every ${esc(months)} mo</div>` : '';
   const i = dueInfo(last, months), parts = [`<b>${label}:</b>`];
-  parts.push(last ? 'last ' + niceD(parseD(last)) : 'no last-change date');
+  parts.push(last ? 'last ' + niceMonth(last) : 'no last-change date');
   if (months) parts.push(`every ${esc(months)} mo`);
-  if (i.due) parts.push(`next <b>${niceD(i.due)}</b> <span class="pill p-${i.status}">${relText(i)}</span>`);
+  if (i.due != null) parts.push(`next <b>${fmtMonth(i.due)}</b> <span class="pill p-${i.status}">${relText(i)}</span>`);
   return `<div class="sched">${parts.join(' · ')}</div>`;
 }
 function searchText(u) {
@@ -242,7 +248,7 @@ function renderUnits() {
   else if (sort === 'route') rows.sort((a, b) => String(a.u.route || '~').localeCompare(String(b.u.route || '~'), undefined, { numeric: true }) || byName(a, b));
   else if (sort === 'loc') rows.sort((a, b) => String(a.u.location || '').localeCompare(String(b.u.location || ''), undefined, { numeric: true }) || byName(a, b));
   else if (sort === 'cool') { const cv = r => { const v = coolVal(r.u); return typeof v === 'number' ? v : v === 'N/A' ? 1000 : 2000; }; rows.sort((a, b) => cv(a) - cv(b) || byName(a, b)); }
-  else rows.sort((a, b) => (a.d.due ? a.d.due.getTime() : Infinity) - (b.d.due ? b.d.due.getTime() : Infinity) || byName(a, b));
+  else rows.sort((a, b) => (a.d.due ?? Infinity) - (b.d.due ?? Infinity) || byName(a, b));
 
   lastShown = rows.map(r => r.u.id);
   updateBulkBar();
@@ -263,7 +269,7 @@ function renderUnits() {
           ${coolLine(u)}
         </div>
         ${PUBLIC ? '' : (() => { const lc = [lastOf(u, 'filters'), lastOf(u, 'belts')].filter(Boolean).sort().pop();
-          return !d.due && lc ? `<span class="pill p-unknown">Last changed ${niceD(parseD(lc))}</span>` : `<span class="pill p-${d.status}">${relText(d)}</span>`; })()}
+          return d.due == null && lc ? `<span class="pill p-unknown">Last changed ${niceMonth(lc)}</span>` : `<span class="pill p-${d.status}">${relText(d)}</span>`; })()}
       </div>
       <div class="parts">
         <div class="pg"><h4>Filters</h4><div class="chips">${hasF ? u.filters.map(filterChip).join('') : '<span class="none">None listed</span>'}</div></div>
@@ -273,8 +279,8 @@ function renderUnits() {
       ${schedLine('Belts', lastOf(u, 'belts'), u.beltInterval, hasB)}
       ${u.notes ? `<div class="notes">${esc(u.notes)}</div>` : ''}
       ${selectMode || PUBLIC ? '' : `<div class="actions">
-        ${hasF ? `<button class="btn sm" data-act="fdone">✓ Filters changed today</button>` : ''}
-        ${hasB ? `<button class="btn sm" data-act="bdone">✓ Belts changed today</button>` : ''}
+        ${hasF ? `<button class="btn sm" data-act="fdone">✓ Filters changed this month</button>` : ''}
+        ${hasB ? `<button class="btn sm" data-act="bdone">✓ Belts changed this month</button>` : ''}
         <span class="spacer"></span>
         <button class="btn sm" data-act="dup">Duplicate</button>
         <button class="btn sm" data-act="edit">Edit</button>
@@ -398,8 +404,8 @@ function partsData() {
   const scope = PUBLIC ? 'all' : $('#pScope').value;
   const sel = S.units.filter(u => {
     if (scope === 'all') return true;
-    const d = unitDue(u); if (!d.due) return false;
-    return scope === 'overdue' ? d.days < 0 : d.days <= +scope;
+    const d = unitDue(u); if (d.due == null) return false;
+    return scope === 'overdue' ? d.late >= 1 : scope === 'month' ? d.late >= 0 : d.late >= -1;
   });
   const fm = new Map(), bm = new Map();
   sel.forEach(u => {
@@ -504,16 +510,16 @@ function editUnit(id, copyFrom) {
           <div class="rows" id="frows">${(u.filters || []).map(filterRow).join('')}</div>
           <button type="button" class="btn sm" id="addF">+ Add filter size</button>
           <div class="grid" style="margin-top:12px">
-            <div class="f c3"><label>Change every (months)</label><input type="number" min="0" step="0.5" name="filterInterval" value="${esc(u.filterInterval)}"></div>
-            <div class="f c3"><label>Last changed</label><input type="date" name="filterLast" value="${esc(u.filterLast)}"></div>
+            <div class="f c3"><label>Change every (months)</label><input type="number" min="0" step="1" name="filterInterval" value="${esc(u.filterInterval)}"></div>
+            <div class="f c3"><label>Last changed (month)</label><input type="month" name="filterLast" value="${esc(String(u.filterLast || '').slice(0, 7))}"></div>
           </div>
         </fieldset>
         <fieldset><legend>Belts</legend>
           <div class="rows" id="brows">${(u.belts || []).map(beltRow).join('')}</div>
           <button type="button" class="btn sm" id="addB">+ Add belt</button>
           <div class="grid" style="margin-top:12px">
-            <div class="f c3"><label>Change every (months)</label><input type="number" min="0" step="0.5" name="beltInterval" value="${esc(u.beltInterval)}"></div>
-            <div class="f c3"><label>Last changed</label><input type="date" name="beltLast" value="${esc(u.beltLast)}"></div>
+            <div class="f c3"><label>Change every (months)</label><input type="number" min="0" step="1" name="beltInterval" value="${esc(u.beltInterval)}"></div>
+            <div class="f c3"><label>Last changed (month)</label><input type="month" name="beltLast" value="${esc(String(u.beltLast || '').slice(0, 7))}"></div>
           </div>
           <p class="hint">Leave belts empty for direct-drive units.</p>
         </fieldset>
@@ -545,7 +551,7 @@ function editUnit(id, copyFrom) {
     })).filter(b => b.size);
     const rec = {
       id: id || uid(), name: v('name'), type: v('type'), location: v('location'), route: v('route'), make: v('make'), model: v('model'),
-      filters, belts, filterInterval: v('filterInterval'), filterLast: v('filterLast'), beltInterval: v('beltInterval'), beltLast: v('beltLast'), cooling, notes: form.elements.notes.value.trim()
+      filters, belts, filterInterval: v('filterInterval'), filterLast: v('filterLast').slice(0, 7), beltInterval: v('beltInterval'), beltLast: v('beltLast').slice(0, 7), cooling, notes: form.elements.notes.value.trim()
     };
     if (id) S.units = S.units.map(x => x.id === id ? rec : x); else S.units.push(rec);
     closeModal(); render(); persist();
@@ -612,8 +618,8 @@ $('#list').addEventListener('click', e => {
   const id = btn.closest('.unit').dataset.id, u = S.units.find(x => x.id === id);
   if (act === 'edit') editUnit(id);
   else if (act === 'dup') editUnit(null, u);
-  else if (act === 'fdone') markChanged([u], 'filters', fmtD(today()));
-  else if (act === 'bdone') markChanged([u], 'belts', fmtD(today()));
+  else if (act === 'fdone') markChanged([u], 'filters', thisMonth());
+  else if (act === 'bdone') markChanged([u], 'belts', thisMonth());
   else if (act === 'del') confirmBox('Delete unit?', `<p style="margin:0">Remove <b>${esc(u.name)}</b> and its filter and belt info?</p>`, 'Delete', () => { S.units = S.units.filter(x => x.id !== id); render(); persist(); });
 });
 $('#addBtn').onclick = () => editUnit();
@@ -622,11 +628,11 @@ $('#bulkAll').onclick = () => { lastShown.forEach(id => selected.add(id)); rende
 $('#bulkClear').onclick = () => { selected.clear(); renderUnits(); };
 $('#bulkF').onclick = () => {
   const list = selectedUnits(), n = list.filter(u => (u.filters || []).length).length;
-  confirmBox('Mark filters changed?', `<p style="margin:0">Mark filters changed today on <b>${n} unit${n === 1 ? '' : 's'}</b> and take their filters out of stock?</p>`, 'Mark changed', () => { markChanged(list, 'filters', fmtD(today())); selected.clear(); selectMode = false; renderUnits(); });
+  confirmBox('Mark filters changed?', `<p style="margin:0">Mark filters changed this month on <b>${n} unit${n === 1 ? '' : 's'}</b> and take their filters out of stock?</p>`, 'Mark changed', () => { markChanged(list, 'filters', thisMonth()); selected.clear(); selectMode = false; renderUnits(); });
 };
 $('#bulkB').onclick = () => {
   const list = selectedUnits(), n = list.filter(u => (u.belts || []).length).length;
-  confirmBox('Mark belts changed?', `<p style="margin:0">Mark belts changed today on <b>${n} unit${n === 1 ? '' : 's'}</b> and take their belts out of stock?</p>`, 'Mark changed', () => { markChanged(list, 'belts', fmtD(today())); selected.clear(); selectMode = false; renderUnits(); });
+  confirmBox('Mark belts changed?', `<p style="margin:0">Mark belts changed this month on <b>${n} unit${n === 1 ? '' : 's'}</b> and take their belts out of stock?</p>`, 'Mark changed', () => { markChanged(list, 'belts', thisMonth()); selected.clear(); selectMode = false; renderUnits(); });
 };
 ['q', 'fType', 'fStatus', 'fCool', 'fRoute', 'sort', 'pScope', 'tq', 'tShort', 'bq', 'bShort', 'nq'].forEach(i => $('#' + i).addEventListener('input', render));
 $('#backupBtn').onclick = backupBox;
