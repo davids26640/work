@@ -265,6 +265,16 @@ function applyMode() {
   if (PUBLIC && $('#sort').value === 'due') $('#sort').value = 'name';
   if (PUBLIC && view === 'today') go('units');
 }
+function pwField(name, label, ac, extra) {
+  return `<div class="f" style="margin-top:10px"><label>${label}</label><div class="pw-wrap"><input type="password" name="${name}" autocomplete="${ac}" minlength="6" required ${extra || ''}><button type="button" class="pw-toggle" data-pwtoggle aria-label="Show password">Show</button></div></div>`;
+}
+function wirePwToggles(form) {
+  form.querySelectorAll('[data-pwtoggle]').forEach(b => b.onclick = () => {
+    const show = b.textContent === 'Show';
+    form.querySelectorAll('.pw-wrap input').forEach(i => { i.type = show ? 'text' : 'password'; });
+    form.querySelectorAll('[data-pwtoggle]').forEach(x => { x.textContent = show ? 'Hide' : 'Show'; x.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); });
+  });
+}
 function authBox(kind) {
   kind = kind || 'in';
   const t = { in: ['Sign in', 'Sign in'], up: ['Create your account', 'Create account'], reset: ['Reset your password', 'Send reset link'] }[kind];
@@ -273,7 +283,8 @@ function authBox(kind) {
     <div class="dbody">
       ${kind === 'up' ? '<p class="hint" style="margin-top:0">Only the two approved email addresses can create an account.</p>' : ''}
       <div class="f"><label>Email</label><input type="email" name="email" autocomplete="email" autofocus required></div>
-      ${kind !== 'reset' ? `<div class="f" style="margin-top:10px"><label>Password</label><input type="password" name="password" autocomplete="${kind === 'up' ? 'new-password' : 'current-password'}" required minlength="6"></div>` : ''}
+      ${kind === 'in' ? pwField('password', 'Password', 'current-password') : ''}
+      ${kind === 'up' ? pwField('password', 'Choose a password', 'new-password') + pwField('password2', 'Type it again', 'new-password') : ''}
       <div class="auth-msg" id="amsg"></div>
       <p style="margin:14px 0 0;display:flex;gap:14px;flex-wrap:wrap">
         ${kind !== 'in' ? '<button type="button" class="auth-switch" data-k="in">Back to sign in</button>' : '<button type="button" class="auth-switch" data-k="up">First time? Create your account</button><button type="button" class="auth-switch" data-k="reset">Forgot password?</button>'}
@@ -283,12 +294,14 @@ function authBox(kind) {
   const f = $('#aform'), msg = (m, ok) => { const el = $('#amsg'); el.textContent = m; el.className = 'auth-msg' + (ok ? ' ok' : ' err'); };
   f.querySelectorAll('[data-m=cancel]').forEach(b => b.onclick = closeModal);
   f.querySelectorAll('[data-k]').forEach(b => b.onclick = () => authBox(b.dataset.k));
+  wirePwToggles(f);
   const here = location.origin + location.pathname;
   f.onsubmit = async e => {
     e.preventDefault();
     const email = f.elements.email.value.trim().toLowerCase(), password = f.elements.password ? f.elements.password.value : '';
     if (!email) return msg('Enter your email address.');
     if (kind !== 'reset' && password.length < 6) return msg('Passwords need at least 6 characters.');
+    if (kind === 'up' && password !== f.elements.password2.value) return msg('The two passwords don’t match. Type them again.');
     const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
     try {
       if (kind === 'in') {
@@ -317,12 +330,14 @@ function authBox(kind) {
 }
 function newPasswordBox() {
   openModal(`<form id="pform"><div class="dhead"><h2>Set a new password</h2></div>
-    <div class="dbody"><div class="f"><label>New password</label><input type="password" name="password" autocomplete="new-password" minlength="6" autofocus required></div><div class="auth-msg" id="pmsg"></div></div>
+    <div class="dbody">${pwField('password', 'New password', 'new-password', 'autofocus')}${pwField('password2', 'Type it again', 'new-password')}<div class="auth-msg" id="pmsg"></div></div>
     <div class="dfoot"><button type="submit" class="btn primary">Save password</button></div></form>`, true);
+  wirePwToggles($('#pform'));
   $('#pform').onsubmit = async e => {
     e.preventDefault();
     const pw = e.target.elements.password.value;
     if (pw.length < 6) { $('#pmsg').textContent = 'Passwords need at least 6 characters.'; return; }
+    if (pw !== e.target.elements.password2.value) { $('#pmsg').textContent = 'The two passwords don’t match. Type them again.'; return; }
     const { error } = await sb.auth.updateUser({ password: pw });
     if (error) $('#pmsg').textContent = error.message; else { closeModal(); toast('Password updated.'); }
   };

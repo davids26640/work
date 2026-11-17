@@ -36,7 +36,7 @@ header{background:#fff;color:var(--ink);border-top:5px solid var(--accent);borde
 
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0}
 .toolbar .grow{flex:1 1 240px}
-input[type=text],input[type=search],input[type=number],input[type=date],select,textarea{
+input[type=text],input[type=search],input[type=number],input[type=date],input[type=month],input[type=email],input[type=password],select,textarea{
   background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
 .toolbar select{width:auto}
@@ -233,3 +233,9 @@ body:not(.mode-claude) .claude-only{display:none !important}
 .log-entry .log-unit{font-weight:600;white-space:nowrap;min-width:110px}
 details.log dl,details.log .log-list{padding:6px 12px}
 @media (max-width:720px){ .today-grid{grid-template-columns:1fr} .log-entry .log-unit{min-width:0} }
+
+/* ---------- Password fields with Show/Hide ---------- */
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:64px}
+.pw-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--accent);font-weight:600;font-size:13px;padding:6px 10px;cursor:pointer;border-radius:4px}
+.pw-toggle:hover{background:#e8f2fb}
