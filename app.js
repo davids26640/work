@@ -286,9 +286,10 @@ function applyMode() {
   if (PUBLIC && view === 'today') go('units');
 }
 function pwField(name, label, ac, extra) {
-  return `<div class="f" style="margin-top:10px"><label>${label}</label><div class="pw-wrap"><input type="password" name="${name}" autocomplete="${ac}" minlength="6" required ${extra || ''}><button type="button" class="pw-toggle" data-pwtoggle aria-label="Show password">Show</button></div></div>`;
+  return `<div class="f" style="margin-top:10px"><label for="pw-${name}">${label}</label><div class="pw-wrap"><input type="password" id="pw-${name}" name="${name}" autocomplete="${ac}" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="6" required ${extra || ''}><button type="button" class="pw-toggle" data-pwtoggle aria-label="Show password">Show</button></div></div>`;
 }
 function wirePwToggles(form) {
+  form.querySelectorAll('.pw-wrap').forEach(w => w.addEventListener('click', e => { if (!e.target.closest('[data-pwtoggle]')) w.querySelector('input').focus(); }));
   form.querySelectorAll('[data-pwtoggle]').forEach(b => b.onclick = () => {
     const show = b.textContent === 'Show';
     form.querySelectorAll('.pw-wrap input').forEach(i => { i.type = show ? 'text' : 'password'; });
@@ -302,7 +303,7 @@ function authBox(kind) {
     <div class="dhead"><h2>${t[0]}</h2><button type="button" class="btn ghost" data-m="cancel">✕</button></div>
     <div class="dbody">
       ${kind === 'up' ? '<p class="hint" style="margin-top:0">Only the two approved email addresses can create an account.</p>' : ''}
-      <div class="f"><label>Email</label><input type="email" name="email" autocomplete="email" autofocus required></div>
+      <div class="f"><label for="auth-email">Email</label><input type="email" id="auth-email" name="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="email" autofocus required></div>
       ${kind === 'in' ? pwField('password', 'Password', 'current-password') : ''}
       ${kind === 'up' ? pwField('password', 'Choose a password', 'new-password') + pwField('password2', 'Type it again', 'new-password') : ''}
       <div class="auth-msg" id="amsg"></div>
@@ -340,7 +341,7 @@ function authBox(kind) {
       }
     } catch (err) {
       const m = String((err && err.message) || err);
-      if (/database error|not allowed|limited to approved/i.test(m)) msg('That email isn’t approved for this tracker.');
+      if (/database error|not allowed|limited to approved/i.test(m)) msg('That email isn’t approved for this tracker. Check it for typos.');
       else if (/invalid login/i.test(m)) msg('Wrong email or password.');
       else if (/not confirmed/i.test(m)) msg('Confirm your email first — check your inbox for the link.');
       else if (/already registered/i.test(m)) msg('That email already has an account. Use Sign in.');
@@ -785,8 +786,8 @@ function renderNotes() {
 
 /* ---------- modal ---------- */
 const modal = $('#modal');
-function openModal(html, narrow) { modal.innerHTML = `<div class="dialog${narrow ? ' narrow' : ''}">${html}</div>`; modal.classList.add('open'); const f = modal.querySelector('[autofocus]'); if (f) f.focus(); }
-function closeModal() { modal.classList.remove('open'); modal.innerHTML = ''; }
+function openModal(html, narrow) { document.documentElement.classList.add('modal-open'); modal.scrollTop = 0; modal.innerHTML = `<div class="dialog${narrow ? ' narrow' : ''}">${html}</div>`; modal.classList.add('open'); const f = modal.querySelector('[autofocus]'); if (f) f.focus(); }
+function closeModal() { modal.classList.remove('open'); modal.innerHTML = ''; document.documentElement.classList.remove('modal-open'); }
 modal.addEventListener('mousedown', e => { if (e.target === modal) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
 

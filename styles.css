@@ -247,6 +247,7 @@ body.public .note-form{grid-template-columns:1fr;border:0;padding:0;background:n
 /* ---------- Dialogs ---------- */
 #modal{position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;padding:12px;z-index:10}
 #modal.open{display:flex;animation:fadeIn .18s ease}
+html.modal-open,html.modal-open body{overflow:hidden}
 .dialog{background:var(--panel);border-radius:14px;width:100%;max-width:720px;box-shadow:var(--shadow);max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);display:flex;flex-direction:column;overflow:hidden;animation:popIn .24s var(--ease)}
 .dialog.narrow{max-width:440px}
 .dialog > form{display:flex;flex-direction:column;min-height:0;flex:1}
@@ -271,7 +272,8 @@ ol.steps{margin:0 0 12px;padding-left:20px} ol.steps li{margin:3px 0}
 .auth-switch{background:none;border:0;padding:0;color:var(--accent-text);cursor:pointer;font-size:14px;text-decoration:underline;text-underline-offset:3px}
 .auth-msg{font-size:14px;margin-top:10px}
 .auth-msg.ok{color:var(--ok)} .auth-msg.err{color:var(--bad)}
-.pw-wrap{position:relative}
+.pw-wrap{position:relative;display:block}
+.pw-wrap input{touch-action:manipulation}
 .pw-wrap input{padding-right:66px}
 .pw-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--accent-text);font-weight:600;font-size:14px;padding:6px 10px;cursor:pointer;border-radius:6px}
 .pw-toggle:hover{background:var(--wash)}
@@ -291,7 +293,7 @@ body:not(.mode-claude) .claude-only{display:none !important}
 @keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes popIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
-@keyframes sheetIn{from{transform:translateY(100%)}to{transform:none}}
+@keyframes sheetIn{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:none}}
 @keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
@@ -336,9 +338,9 @@ body:not(.mode-claude) .claude-only{display:none !important}
   th,td{padding:9px 10px}
   .today-grid{grid-template-columns:1fr}
   .log-entry .log-unit{min-width:0}
-  #modal{padding:0;align-items:flex-end}
-  .dialog,.dialog.narrow{max-width:none;border-radius:16px 16px 0 0;max-height:calc(100dvh - 28px);animation:sheetIn .3s var(--ease)}
-  .dfoot{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  #modal{padding:10px;align-items:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .dialog,.dialog.narrow{max-width:none;max-height:calc(100dvh - 20px);animation:sheetIn .26s var(--ease)}
   .dfoot .btn{flex:1}
+  .row input,.arrange select,.arrange input{font-size:16px}
   .toast{bottom:14px}
 }
