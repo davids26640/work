@@ -1,8 +1,7 @@
-/* Filter & Belt Tracker: public copy for GitHub. View-only, with no change dates.
-   Made with "Copy for GitHub" */
+/* Filter & Belt Tracker: public offline copy. No change dates. The live site loads current data from the database. */
 window.TRACKER_DATA = {
  "public": true,
- "exportedAt": "2026-11-02T17:57:34.017Z",
+ "exportedAt": "2026-11-17T12:54:52.807Z",
  "units": [
   {
    "id": "aupyxah5ch22",
@@ -343,8 +342,15 @@ window.TRACKER_DATA = {
    "name": "Ash 11",
    "type": "ASH",
    "location": "Roof",
+   "route": "Route 1",
    "make": "",
    "model": "",
+   "serial": "",
+   "mfgDate": "",
+   "coolingSize": "",
+   "heatingInput": "",
+   "refrigerant": "",
+   "refCharge": "",
    "filters": [
     {
      "size": "24x24x24",
@@ -368,9 +374,8 @@ window.TRACKER_DATA = {
    ],
    "filterInterval": "",
    "beltInterval": "",
-   "notes": "Pre",
-   "cooling": 50,
-   "route": "Route 1"
+   "cooling": 100,
+   "notes": "Pre"
   },
   {
    "id": "heegsnyevltz",
@@ -2851,7 +2856,7 @@ window.TRACKER_DATA = {
   {
    "size": "24x24x24",
    "kind": "Bag (5 per box)",
-   "qty": 499
+   "qty": 199
   },
   {
    "size": "24x24x2",
@@ -2861,7 +2866,7 @@ window.TRACKER_DATA = {
   {
    "size": "24x24x1",
    "kind": "Poly",
-   "qty": 192
+   "qty": 0
   },
   {
    "size": "18x25x2",

@@ -22,7 +22,9 @@
         </div>
       </div>
       <div class="top-right">
-        <button class="btn edit-only" id="githubBtn" title="Make the public, date-free data.js for your GitHub site">⇪ Copy for GitHub</button>
+        <button class="btn edit-only claude-only" id="githubBtn" title="Make the public, date-free data.js for your GitHub site">⇪ Copy for GitHub</button>
+        <button class="btn web-only" id="signInBtn" hidden>Sign in</button>
+        <span class="user-chip" id="userChip" hidden><span id="userEmail"></span><button class="btn sm" id="signOutBtn">Sign out</button></span>
         <div class="save" id="save"><span class="dot"></span><span id="saveText">Loading…</span></div>
       </div>
     </div>
@@ -44,6 +46,7 @@
     <button class="tab" role="tab" data-view="belts" aria-selected="false">Belt totals</button>
     <button class="tab" role="tab" data-view="parts" aria-selected="false">Parts list</button>
     <button class="tab" role="tab" data-view="notes" aria-selected="false">Notes</button>
+    <button class="tab edit-only" role="tab" data-view="today" aria-selected="false">Today's notes</button>
   </div>
 
   <!-- Units -->
@@ -152,6 +155,27 @@
     <div id="parts"></div>
   </section>
 
+  <!-- Today's notes (signed-in users only) -->
+  <section id="view-today" hidden>
+    <div class="today-grid">
+      <div class="today-input">
+        <div class="toolbar" style="margin-bottom:8px">
+          <label for="todayDate" style="font-weight:600;font-size:14px">Date</label>
+          <input type="date" id="todayDate" style="width:auto">
+        </div>
+        <textarea id="todayText" rows="12" placeholder="RTU 08&#10;Replaced supply fan belt&#10;&#10;Ash 12&#10;Needs pleats, bags changed"></textarea>
+        <p class="hint">Put the unit name on its own line, then the notes for it on the lines below. Start the next unit on a new line. You can also write it on one line, like <b>RTU 08: replaced belt</b>.</p>
+        <div class="today-actions"><button class="btn" id="todayClear">Clear</button><button class="btn primary" id="todayApply" disabled>Add to units</button></div>
+      </div>
+      <div class="today-preview">
+        <h3 class="section-title" style="margin-top:0">Preview</h3>
+        <div id="todayPreview"><p class="none">Start typing and you'll see which unit each note goes to.</p></div>
+      </div>
+    </div>
+    <h3 class="section-title">Recent notes</h3>
+    <div id="todayRecent"></div>
+  </section>
+
   <!-- Notes -->
   <section id="view-notes" hidden>
     <div class="subtabs" role="tablist">
@@ -176,6 +200,8 @@
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="data.js"></script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 </body>
 </html>

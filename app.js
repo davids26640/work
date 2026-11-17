@@ -21,8 +21,12 @@ function normalize(d) {
 }
 /* PUBLIC: set when data.js was made with "Copy for GitHub". That copy has no change
    dates in it, and the site runs view-only: no editing, nothing saved. */
-const PUBLIC = !!(window.TRACKER_DATA && window.TRACKER_DATA.public);
-const EXPORTED_AT = (window.TRACKER_DATA && window.TRACKER_DATA.exportedAt) || '';
+let PUBLIC = !!(window.TRACKER_DATA && window.TRACKER_DATA.public);
+let EXPORTED_AT = (window.TRACKER_DATA && window.TRACKER_DATA.exportedAt) || '';
+/* Web mode (the GitHub site): data lives in Supabase. Visitors read the public copy;
+   the two approved accounts sign in to read and change the private data. */
+const CFG = window.TRACKER_CONFIG || null;
+let sb = null, sbUser = null, sbVersion = null, sbSaving = false, sbPending = false, sbSeen = false;
 let S = normalize(window.TRACKER_DATA);
 
 let mode = 'local', artifactApi = null, readOnly = false, saveTimer = null;
@@ -146,6 +150,7 @@ function githubBox() {
 }
 function persist() {
   if (PUBLIC) return;
+  if (mode === 'web') { setStatus('Saving…', 'busy'); clearTimeout(saveTimer); saveTimer = setTimeout(saveWeb, 1000); return; }
   lsSet();
   if (mode === 'local') { setStatus('Saved in this browser'); return; }
   if (readOnly) { setStatus('View only — changes are not saved', 'warn'); return; }
@@ -167,13 +172,232 @@ async function doPublish() {
   }
 }
 async function initStorage() {
+  const inClaude = !!(window.claude && typeof window.claude.use === 'function');
+  if (!inClaude && CFG && window.supabase && typeof window.supabase.createClient === 'function') return initWeb();
   if (PUBLIC) { setStatus(EXPORTED_AT ? 'Updated ' + niceD(new Date(EXPORTED_AT)) : 'View only'); return; }
-  try { if (window.claude && typeof window.claude.use === 'function') artifactApi = await window.claude.use('artifact'); } catch (e) { artifactApi = null; }
-  if (artifactApi) { mode = 'shared'; setStatus('All changes saved'); return; }
+  try { if (inClaude) artifactApi = await window.claude.use('artifact'); } catch (e) { artifactApi = null; }
+  if (artifactApi) { mode = 'shared'; document.body.classList.add('mode-claude'); setStatus('All changes saved'); return; }
   mode = 'local';
   const saved = lsGet();
   if (saved) { S = normalize(saved); render(); }
   setStatus('Saved in this browser');
+}
+
+/* ---------- web mode: Supabase ---------- */
+async function initWeb() {
+  mode = 'web'; PUBLIC = true;
+  document.body.classList.add('mode-web');
+  sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
+  applyMode(); render();
+  loadPublic();
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') { newPasswordBox(); return; }
+    setTimeout(() => handleSession(session), 0);   // run outside the auth callback
+  });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshIfChanged(); });
+}
+async function loadPublic() {
+  try {
+    const { data, error } = await sb.from('tracker_public').select('doc').eq('id', 1).maybeSingle();
+    if (error || !data) throw error || new Error('no data');
+    if (!PUBLIC) return;                       // signed in meanwhile: keep private data
+    S = normalize(data.doc); EXPORTED_AT = data.doc.exportedAt || '';
+    render();
+    setStatus(EXPORTED_AT ? 'Updated ' + niceD(new Date(EXPORTED_AT)) : 'View only');
+  } catch (e) {
+    if (PUBLIC) setStatus(EXPORTED_AT ? 'Updated ' + niceD(new Date(EXPORTED_AT)) + ' (offline copy)' : 'View only', 'warn');
+  }
+}
+async function handleSession(session) {
+  const user = session && session.user;
+  if (sbSeen && (user && user.id) === (sbUser && sbUser.id)) return;
+  sbSeen = true;
+  sbUser = user || null;
+  $('#signInBtn').hidden = !!sbUser;
+  $('#userChip').hidden = !sbUser;
+  $('#userEmail').textContent = sbUser ? sbUser.email : '';
+  if (!sbUser) { PUBLIC = true; sbVersion = null; applyMode(); loadPublic(); return; }
+  setStatus('Loading your data…', 'busy');
+  const ok = await loadPrivate();
+  if (!ok) {
+    PUBLIC = true; applyMode(); loadPublic();
+    toast('Signed in, but this account doesn’t have access to the full tracker.');
+  }
+}
+async function loadPrivate() {
+  const { data, error } = await sb.from('tracker_private').select('doc, version').eq('id', 1).maybeSingle();
+  if (error || !data) return false;
+  S = normalize(data.doc); sbVersion = data.version;
+  PUBLIC = false; applyMode(); render();
+  $('#toast').hidden = true;
+  setStatus('All changes saved');
+  return true;
+}
+async function saveWeb() {
+  if (PUBLIC || !sb) return;
+  if (sbSaving) { sbPending = true; return; }
+  sbSaving = true; sbPending = false;
+  setStatus('Saving…', 'busy');
+  try {
+    const { data, error } = await sb.rpc('save_tracker', { new_doc: S, expected_version: sbVersion });
+    if (error) throw error;
+    if (data == null) {
+      setStatus('The other user saved first — loading their version', 'warn');
+      toast('Your last change wasn’t saved because the other user saved at the same time. Their version is loaded now — please redo that change.');
+      await loadPrivate();
+    } else { sbVersion = data; setStatus('All changes saved'); }
+  } catch (e) {
+    setStatus('Save failed — check your connection and make another change to retry', 'warn');
+  } finally {
+    sbSaving = false;
+    if (sbPending) saveWeb();
+  }
+}
+async function refreshIfChanged() {
+  if (mode !== 'web' || PUBLIC || sbSaving || sbPending || saveTimer && $('#save').classList.contains('busy')) return;
+  const { data } = await sb.from('tracker_private').select('version').eq('id', 1).maybeSingle();
+  if (data && data.version !== sbVersion) { await loadPrivate(); toast('Updated with the latest changes.'); }
+}
+function applyMode() {
+  document.body.classList.toggle('public', PUBLIC);
+  const o = $('#sort option[value=due]');
+  o.hidden = o.disabled = PUBLIC;
+  if (PUBLIC && $('#sort').value === 'due') $('#sort').value = 'name';
+  if (PUBLIC && view === 'today') go('units');
+}
+function authBox(kind) {
+  kind = kind || 'in';
+  const t = { in: ['Sign in', 'Sign in'], up: ['Create your account', 'Create account'], reset: ['Reset your password', 'Send reset link'] }[kind];
+  openModal(`<form id="aform" novalidate>
+    <div class="dhead"><h2>${t[0]}</h2><button type="button" class="btn ghost" data-m="cancel">✕</button></div>
+    <div class="dbody">
+      ${kind === 'up' ? '<p class="hint" style="margin-top:0">Only the two approved email addresses can create an account.</p>' : ''}
+      <div class="f"><label>Email</label><input type="email" name="email" autocomplete="email" autofocus required></div>
+      ${kind !== 'reset' ? `<div class="f" style="margin-top:10px"><label>Password</label><input type="password" name="password" autocomplete="${kind === 'up' ? 'new-password' : 'current-password'}" required minlength="6"></div>` : ''}
+      <div class="auth-msg" id="amsg"></div>
+      <p style="margin:14px 0 0;display:flex;gap:14px;flex-wrap:wrap">
+        ${kind !== 'in' ? '<button type="button" class="auth-switch" data-k="in">Back to sign in</button>' : '<button type="button" class="auth-switch" data-k="up">First time? Create your account</button><button type="button" class="auth-switch" data-k="reset">Forgot password?</button>'}
+      </p>
+    </div>
+    <div class="dfoot"><button type="button" class="btn" data-m="cancel">Cancel</button><button type="submit" class="btn primary">${t[1]}</button></div></form>`, true);
+  const f = $('#aform'), msg = (m, ok) => { const el = $('#amsg'); el.textContent = m; el.className = 'auth-msg' + (ok ? ' ok' : ' err'); };
+  f.querySelectorAll('[data-m=cancel]').forEach(b => b.onclick = closeModal);
+  f.querySelectorAll('[data-k]').forEach(b => b.onclick = () => authBox(b.dataset.k));
+  const here = location.origin + location.pathname;
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const email = f.elements.email.value.trim().toLowerCase(), password = f.elements.password ? f.elements.password.value : '';
+    if (!email) return msg('Enter your email address.');
+    if (kind !== 'reset' && password.length < 6) return msg('Passwords need at least 6 characters.');
+    const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    try {
+      if (kind === 'in') {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        closeModal();
+      } else if (kind === 'up') {
+        const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: here } });
+        if (error) throw error;
+        if (data && data.session) closeModal();
+        else msg('Account created. Check your email for a confirmation link, then come back here and sign in.', true);
+      } else {
+        const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: here });
+        if (error) throw error;
+        msg('If that email has an account, a reset link is on its way.', true);
+      }
+    } catch (err) {
+      const m = String((err && err.message) || err);
+      if (/database error|not allowed|limited to approved/i.test(m)) msg('That email isn’t approved for this tracker.');
+      else if (/invalid login/i.test(m)) msg('Wrong email or password.');
+      else if (/not confirmed/i.test(m)) msg('Confirm your email first — check your inbox for the link.');
+      else if (/already registered/i.test(m)) msg('That email already has an account. Use Sign in.');
+      else msg(m);
+    } finally { btn.disabled = false; }
+  };
+}
+function newPasswordBox() {
+  openModal(`<form id="pform"><div class="dhead"><h2>Set a new password</h2></div>
+    <div class="dbody"><div class="f"><label>New password</label><input type="password" name="password" autocomplete="new-password" minlength="6" autofocus required></div><div class="auth-msg" id="pmsg"></div></div>
+    <div class="dfoot"><button type="submit" class="btn primary">Save password</button></div></form>`, true);
+  $('#pform').onsubmit = async e => {
+    e.preventDefault();
+    const pw = e.target.elements.password.value;
+    if (pw.length < 6) { $('#pmsg').textContent = 'Passwords need at least 6 characters.'; return; }
+    const { error } = await sb.auth.updateUser({ password: pw });
+    if (error) $('#pmsg').textContent = error.message; else { closeModal(); toast('Password updated.'); }
+  };
+}
+
+/* ---------- Today's notes ---------- */
+function normUnit(s) {
+  return String(s || '').toLowerCase().replace(/[()]/g, ' ').replace(/\bhouse\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ').trim().split(' ')
+    .map(t => t.replace(/^0+(?=\d)/, '').replace(/([a-z])0+(?=\d)/g, '$1')).join('');
+}
+function unitIndex() {
+  const m = new Map();
+  S.units.forEach(u => { const k = normUnit(u.name); if (!k) return; m.set(k, m.has(k) ? 'AMBIG' : u); });
+  return m;
+}
+function parseToday(text) {
+  const idx = unitIndex(), blocks = [];
+  let cur = null, afterBlank = true;
+  const find = name => { const k = normUnit(name); const u = idx.get(k); return u === 'AMBIG' ? null : u || null; };
+  // a short line like "RTU 99" or "Ash 400" is meant as a unit heading even if it doesn't match one
+  const looksLikeUnit = l => l.length <= 30 && /^\(?\s*(rtu|ash|sub|ahu|mau|king|lie?bert|lei?bert|ww|training|power|gear)\b.*\d/i.test(l);
+  String(text || '').split(/\r?\n/).forEach(raw => {
+    const line = raw.trim();
+    if (!line) { afterBlank = true; return; }
+    const startsBlock = afterBlank; afterBlank = false;
+    let u = find(line);
+    if (u) { cur = { unit: u, label: line, lines: [] }; blocks.push(cur); return; }
+    const m = /^(.{1,40}?)\s*(?::|\s-\s|\s–\s)\s*(.+)$/.exec(line);
+    if (m && (u = find(m[1]))) { cur = { unit: u, label: m[1], lines: [m[2]] }; blocks.push(cur); return; }
+    if (!cur || startsBlock || looksLikeUnit(line)) { cur = { unit: null, label: line, lines: [] }; blocks.push(cur); return; }
+    cur.lines.push(line.replace(/^[(\s]+|[)\s]+$/g, '') || line);
+  });
+  return blocks.map(b => ({ ...b, text: b.lines.join('\n') }));
+}
+function renderToday() {
+  if (!$('#todayDate').value) $('#todayDate').value = fmtD(today());
+  const blocks = parseToday($('#todayText').value), el = $('#todayPreview');
+  const good = blocks.filter(b => b.unit && b.text);
+  $('#todayApply').disabled = !good.length;
+  $('#todayApply').textContent = good.length ? `Add to ${good.length} unit${good.length === 1 ? '' : 's'}` : 'Add to units';
+  el.innerHTML = blocks.length ? blocks.map(b => b.unit
+    ? `<div class="pv-block${b.text ? '' : ' bad'}"><div class="pv-unit">✓ ${esc(b.unit.name)}</div>${b.text ? `<div class="pv-text">${esc(b.text)}</div>` : '<div class="pv-warn">No notes under this unit yet.</div>'}</div>`
+    : `<div class="pv-block bad"><div class="pv-unit">⚠ “${esc(b.label)}”</div><div class="pv-warn">Not a unit name I recognize. Put a unit name on the line above, or check the spelling.</div>${b.text ? `<div class="pv-text">${esc(b.text)}</div>` : ''}</div>`).join('')
+    : '<p class="none">Start typing and you\'ll see which unit each note goes to.</p>';
+  const all = [];
+  S.units.forEach(u => (u.log || []).forEach(l => all.push({ u, l })));
+  all.sort((a, b) => String(b.l.date).localeCompare(String(a.l.date)) || String(b.l.at || '').localeCompare(String(a.l.at || '')));
+  $('#todayRecent').innerHTML = all.length
+    ? `<div class="today-preview">${all.slice(0, 40).map(({ u, l }) => `<div class="log-entry"><span class="log-date">${niceD(parseD(l.date))}</span><span class="log-unit">${esc(u.name)}</span><span class="log-text">${esc(l.text)}</span></div>`).join('')}</div>`
+    : '<p class="none">No notes added yet.</p>';
+}
+function applyToday() {
+  const date = $('#todayDate').value || fmtD(today());
+  const good = parseToday($('#todayText').value).filter(b => b.unit && b.text);
+  if (!good.length) return;
+  const added = [];
+  good.forEach(b => {
+    const u = S.units.find(x => x.id === b.unit.id); if (!u) return;
+    const entry = { id: uid(), date, text: b.text, at: new Date().toISOString(), by: sbUser ? sbUser.email : '' };
+    u.log = (u.log || []).concat(entry); added.push([u.id, entry.id]);
+  });
+  const draft = $('#todayText').value;
+  $('#todayText').value = ''; try { localStorage.removeItem('fbt-today-draft'); } catch (e) {}
+  render(); persist();
+  toast(`Notes added to ${added.length} unit${added.length === 1 ? '' : 's'}.`, () => {
+    added.forEach(([uidv, eid]) => { const u = S.units.find(x => x.id === uidv); if (u) u.log = (u.log || []).filter(l => l.id !== eid); });
+    $('#todayText').value = draft; render(); persist(); toast('Undone.');
+  });
+}
+function logBlock(u) {
+  if (PUBLIC || !(u.log || []).length) return '';
+  const list = u.log.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.at || '').localeCompare(String(a.at || '')));
+  return `<details class="plate log"><summary>Notes log (${list.length}) · latest ${niceD(parseD(list[0].date))}</summary><div class="log-list">${list.map(l =>
+    `<div class="log-entry"><span class="log-date">${niceD(parseD(l.date))}</span><span class="log-text">${esc(l.text)}</span><button class="btn ghost sm" data-logdel="${esc(l.id)}" title="Delete this note">✕</button></div>`).join('')}</div></details>`;
 }
 
 /* ---------- helpers ---------- */
@@ -217,7 +441,7 @@ function schedLine(label, last, months, has) {
 function searchText(u) {
   const cv = coolVal(u);
   return [cv === null ? '' : 'cooling ' + cv + (cv === 'N/A' ? '' : '%'), u.route, u.name, u.type, TYPE_NAMES[u.type], u.location, u.make, u.model, u.notes,
-    u.serial, u.refrigerant, u.coolingSize,
+    u.serial, u.refrigerant, u.coolingSize, ...(PUBLIC ? [] : (u.log || []).map(l => l.text)),
     ...(u.filters || []).flatMap(f => [f.size, f.kind, f.merv && ('merv ' + f.merv)]),
     ...(u.belts || []).flatMap(b => [b.size, b.note])].join(' ').toLowerCase();
 }
@@ -237,7 +461,7 @@ function render() {
   const fr = $('#fRoute'), cur = fr.value;
   fr.innerHTML = '<option value="">All routes / groups</option>' + routes.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
   fr.value = routes.includes(cur) ? cur : '';
-  ({ units: renderUnits, totals: renderTotals, belts: renderBeltTotals, parts: renderParts, notes: renderNotes })[view]();
+  ({ units: renderUnits, totals: renderTotals, belts: renderBeltTotals, parts: renderParts, notes: renderNotes, today: renderToday })[view]();
 }
 
 function renderUnits() {
@@ -286,6 +510,7 @@ function renderUnits() {
       ${schedLine('Filters', lastOf(u, 'filters'), u.filterInterval, hasF)}
       ${schedLine('Belts', lastOf(u, 'belts'), u.beltInterval, hasB)}
       ${plateBlock(u)}
+      ${logBlock(u)}
       ${u.notes ? `<div class="notes">${esc(u.notes)}</div>` : ''}
       ${selectMode || PUBLIC ? '' : `<div class="actions">
         ${hasF ? `<button class="btn sm" data-act="fdone">✓ Filters changed this month</button>` : ''}
@@ -504,7 +729,7 @@ function editUnit(id, copyFrom) {
   if (copyFrom) u.name = (u.name || '') + ' (copy)';
   openModal(`
     <form id="uform" novalidate>
-      <div class="dhead"><h2>${id ? 'Edit unit' : 'Add unit'}</h2><button type="button" class="btn ghost" data-m="cancel">✕</button></div>
+      <div class="dhead"><h2>${id ? 'Edit unit' : 'Add unit'}</h2><div class="dhead-actions"><button type="submit" class="btn primary sm">${id ? 'Save changes' : 'Add unit'}</button><button type="button" class="btn ghost" data-m="cancel" title="Close">✕</button></div></div>
       <div class="dbody">
         <div class="grid">
           <div class="f c2"><label>Unit name / tag *</label><input type="text" name="name" value="${esc(u.name)}" placeholder="RTU-3" autofocus></div>
@@ -575,6 +800,7 @@ function editUnit(id, copyFrom) {
       serial: v('serial'), mfgDate: v('mfgDate'), coolingSize: v('coolingSize'), heatingInput: v('heatingInput'), refrigerant: v('refrigerant'), refCharge: v('refCharge'),
       filters, belts, filterInterval: v('filterInterval'), filterLast: v('filterLast').slice(0, 7), beltInterval: v('beltInterval'), beltLast: v('beltLast').slice(0, 7), cooling, notes: form.elements.notes.value.trim()
     };
+    if (id) { const old = S.units.find(x => x.id === id); if (old && old.log) rec.log = old.log; }
     if (id) S.units = S.units.map(x => x.id === id ? rec : x); else S.units.push(rec);
     closeModal(); render(); persist();
   };
@@ -628,6 +854,13 @@ async function copyText(btn, txt, label) {
 /* ---------- events ---------- */
 $('#list').addEventListener('click', e => {
   if (PUBLIC) return;
+  const ld = e.target.closest('[data-logdel]');
+  if (ld) {
+    e.preventDefault();
+    const u = S.units.find(x => x.id === ld.closest('.unit').dataset.id);
+    confirmBox('Delete note?', '<p style="margin:0">Remove this note from the unit’s log?</p>', 'Delete', () => { u.log = (u.log || []).filter(l => l.id !== ld.dataset.logdel); render(); persist(); });
+    return;
+  }
   if (selectMode) {
     const card = e.target.closest('.unit'); if (!card) return;
     const id = card.dataset.id;
@@ -742,15 +975,22 @@ function route() {
   const h = location.hash.slice(1);
   if (h === 'notes-cooling' || h === 'notes-heating') { view = 'notes'; noteTab = h.slice(6); }
   else if (h === 'notes') view = 'notes';
+  else if (h === 'today' && !PUBLIC) view = 'today';
   else view = ['units', 'totals', 'belts', 'parts'].includes(h) ? h : 'units';
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === view)));
-  ['units', 'totals', 'belts', 'parts', 'notes'].forEach(v => { $('#view-' + v).hidden = v !== view; });
+  ['units', 'totals', 'belts', 'parts', 'notes', 'today'].forEach(v => { $('#view-' + v).hidden = v !== view; });
   render();
 }
 window.addEventListener('hashchange', route);
 
-document.body.classList.toggle('public', PUBLIC);
-if (PUBLIC) { const o = $('#sort option[value=due]'); o.hidden = o.disabled = true; $('#sort').value = 'name'; }
+applyMode();
+$('#signInBtn').onclick = () => authBox('in');
+$('#signOutBtn').onclick = async () => { if (sb) { clearTimeout(saveTimer); if (!PUBLIC && $('#save').classList.contains('busy')) await saveWeb(); await sb.auth.signOut(); } };
+$('#todayText').addEventListener('input', () => { try { localStorage.setItem('fbt-today-draft', $('#todayText').value); } catch (e) {} renderToday(); });
+$('#todayDate').addEventListener('input', renderToday);
+$('#todayApply').onclick = applyToday;
+$('#todayClear').onclick = () => { $('#todayText').value = ''; try { localStorage.removeItem('fbt-today-draft'); } catch (e) {} renderToday(); };
+try { const d = localStorage.getItem('fbt-today-draft'); if (d) $('#todayText').value = d; } catch (e) {}
 $('#fType').innerHTML += TYPES.map(t => `<option value="${t}">${typeLabel(t)}</option>`).join('');
 route();
 initStorage();

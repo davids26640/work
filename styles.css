@@ -198,3 +198,38 @@ details.plate dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px
 details.plate dt{color:var(--muted)}
 details.plate dd{margin:0;word-break:break-all}
 details.plate dd.mono{font-family:var(--mono)}
+
+/* ---------- Dialogs: header and footer always on screen ---------- */
+#modal{padding:12px;align-items:center}
+.dialog{max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);display:flex;flex-direction:column;overflow:hidden}
+.dialog > form{display:flex;flex-direction:column;min-height:0;flex:1}
+.dhead,.dfoot{flex:none}
+.dbody{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.dhead-actions{display:flex;align-items:center;gap:6px}
+
+/* ---------- Sign-in / modes ---------- */
+body:not(.mode-web) .web-only{display:none !important}
+body:not(.mode-claude) .claude-only{display:none !important}
+.user-chip{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.user-chip #userEmail{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.auth-switch{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font-size:13px;text-decoration:underline}
+.auth-msg{font-size:13px;margin-top:10px}
+.auth-msg.ok{color:var(--ok)}
+
+/* ---------- Today's notes ---------- */
+.today-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;margin-top:16px}
+.today-input textarea{min-height:240px;font-size:15px;line-height:1.5}
+.today-actions{display:flex;justify-content:flex-end;gap:8px}
+.today-preview{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.pv-block{border-left:4px solid var(--ok);padding:6px 10px;margin-bottom:8px;background:#f7faf8;border-radius:0 6px 6px 0}
+.pv-block.bad{border-left-color:var(--bad);background:var(--bad-bg)}
+.pv-block .pv-unit{font-weight:700;font-size:14px}
+.pv-block .pv-text{white-space:pre-wrap;font-size:14px;margin-top:2px}
+.pv-block .pv-warn{font-size:12px;color:var(--bad);margin-top:2px}
+.log-entry{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid #eef0f2;font-size:13px}
+.log-entry:first-child{border-top:0}
+.log-entry .log-date{color:var(--muted);white-space:nowrap;min-width:84px}
+.log-entry .log-text{flex:1;white-space:pre-wrap}
+.log-entry .log-unit{font-weight:600;white-space:nowrap;min-width:110px}
+details.log dl,details.log .log-list{padding:6px 12px}
+@media (max-width:720px){ .today-grid{grid-template-columns:1fr} .log-entry .log-unit{min-width:0} }
