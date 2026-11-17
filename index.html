@@ -194,15 +194,15 @@
       <div class="today-input">
         <label class="arrange" style="margin-bottom:10px"><span>Date</span><input type="date" id="todayDate"></label>
         <textarea id="todayText" rows="12" placeholder="RTU 08&#10;Replaced supply fan belt&#10;&#10;Ash 12&#10;Needs pleats, bags changed"></textarea>
-        <p class="hint">Put the unit name on its own line, then the notes for it on the lines below. Leave a blank line before the next unit. One line works too, like <b>RTU 08: replaced belt</b>.</p>
-        <div class="today-actions"><button class="btn" id="todayClear">Clear</button><button class="btn primary" id="todayApply" disabled>Add to units</button></div>
+        <p class="hint">Put the unit name on its own line, then what was done on the lines below. Leave a blank line before the next unit. One line works too, like <b>RTU 08: replaced belt</b>. Each one is added to that unit's service record.</p>
+        <div class="today-actions"><button class="btn" id="todayClear">Clear</button><button class="btn primary" id="todayApply" disabled>Add to service records</button></div>
       </div>
       <div class="today-preview">
-        <h3 class="section-title" style="margin-top:0">Where each note will go</h3>
+        <h3 class="section-title" style="margin-top:0">Where each entry will go</h3>
         <div id="todayPreview"><p class="none">Start typing and each note shows up here under its unit.</p></div>
       </div>
     </div>
-    <h3 class="section-title">Recent notes</h3>
+    <h3 class="section-title">Recent service records</h3>
     <div id="todayRecent"></div>
   </section>
 

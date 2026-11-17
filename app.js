@@ -62,9 +62,12 @@ function markChanged(list, part, date) {
   const todo = items.filter(u => monthIdx(u[field]) !== monthIdx(date)), skipped = items.length - todo.length;
   if (!todo.length) { toast(skipped ? `Already marked ${part} changed this month.` : `No ${part} listed on ${list.length === 1 ? 'that unit' : 'those units'}.`); return; }
   const snap = JSON.stringify({ stock: S.stock, beltStock: S.beltStock, dates: todo.map(u => [u.id, u[field]]) });
-  let taken = 0; const short = new Set();
+  let taken = 0; const short = new Set(), logged = [];
   todo.forEach(u => {
     u[field] = date;
+    const parts = part === 'belts' ? u.belts.map(b => `${b.qty || 1} × ${b.size}`) : u.filters.map(f => `${f.qty || 1} × ${dispSize(f.size)}${f.kind ? ' ' + baseKind(f.kind).toLowerCase() : ''}`);
+    const entry = svcEntry(fmtD(today()), `${part === 'belts' ? 'Belts' : 'Filters'} changed (${parts.join(', ')})`, true);
+    u.log = (u.log || []).concat(entry); logged.push([u.id, entry.id]);
     if (part === 'belts') u.belts.forEach(b => {
       const k = bkey(b.size); let st = S.beltStock.find(x => bkey(x.size) === k);
       if (!st) { st = { size: k, qty: 0 }; S.beltStock.push(st); }
@@ -84,6 +87,7 @@ function markChanged(list, part, date) {
   toast(msg, () => {
     const o = JSON.parse(snap); S.stock = o.stock; S.beltStock = o.beltStock;
     o.dates.forEach(([id, v]) => { const u = S.units.find(x => x.id === id); if (u) u[field] = v; });
+    logged.forEach(([id, eid]) => { const u = S.units.find(x => x.id === id); if (u) u.log = (u.log || []).filter(l => l.id !== eid); });
     render(); persist(); toast('Undone.');
   });
 }
@@ -399,7 +403,7 @@ function renderToday() {
   const blocks = parseToday($('#todayText').value), el = $('#todayPreview');
   const good = blocks.filter(b => b.unit && b.text);
   $('#todayApply').disabled = !good.length;
-  $('#todayApply').textContent = good.length ? `Add to ${good.length} unit${good.length === 1 ? '' : 's'}` : 'Add to units';
+  $('#todayApply').textContent = good.length ? `Add to ${good.length} unit${good.length === 1 ? '' : 's'}` : 'Add to service records';
   el.innerHTML = blocks.length ? blocks.map(b => b.unit
     ? `<div class="pv-block${b.text ? '' : ' bad'}"><div class="pv-unit">✓ ${esc(b.unit.name)}</div>${b.text ? `<div class="pv-text">${esc(b.text)}</div>` : '<div class="pv-warn">No notes under this unit yet.</div>'}</div>`
     : `<div class="pv-block bad"><div class="pv-unit">⚠ “${esc(b.label)}”</div><div class="pv-warn">Not a unit name I recognize. Put a unit name on the line above, or check the spelling.</div>${b.text ? `<div class="pv-text">${esc(b.text)}</div>` : ''}</div>`).join('')
@@ -409,7 +413,7 @@ function renderToday() {
   all.sort((a, b) => String(b.l.date).localeCompare(String(a.l.date)) || String(b.l.at || '').localeCompare(String(a.l.at || '')));
   $('#todayRecent').innerHTML = all.length
     ? `<div class="today-preview">${all.slice(0, 40).map(({ u, l }) => `<div class="log-entry"><span class="log-date">${niceD(parseD(l.date))}</span><span class="log-unit">${esc(u.name)}</span><span class="log-text">${esc(l.text)}</span></div>`).join('')}</div>`
-    : '<p class="none">No notes added yet.</p>';
+    : '<p class="none">No service records yet.</p>';
 }
 function applyToday() {
   const date = $('#todayDate').value || fmtD(today());
@@ -418,22 +422,41 @@ function applyToday() {
   const added = [];
   good.forEach(b => {
     const u = S.units.find(x => x.id === b.unit.id); if (!u) return;
-    const entry = { id: uid(), date, text: b.text, at: new Date().toISOString(), by: sbUser ? sbUser.email : '' };
+    const entry = svcEntry(date, b.text);
     u.log = (u.log || []).concat(entry); added.push([u.id, entry.id]);
   });
   const draft = $('#todayText').value;
   $('#todayText').value = ''; try { localStorage.removeItem('fbt-today-draft'); } catch (e) {}
   render(); persist();
-  toast(`Notes added to ${added.length} unit${added.length === 1 ? '' : 's'}.`, () => {
+  toast(`Added to the service record of ${added.length} unit${added.length === 1 ? '' : 's'}.`, () => {
     added.forEach(([uidv, eid]) => { const u = S.units.find(x => x.id === uidv); if (u) u.log = (u.log || []).filter(l => l.id !== eid); });
     $('#todayText').value = draft; render(); persist(); toast('Undone.');
   });
 }
-function logBlock(u) {
-  if (PUBLIC || !(u.log || []).length) return '';
-  const list = u.log.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.at || '').localeCompare(String(a.at || '')));
-  return `<div class="usec wide"><h4>Notes log (${list.length})</h4><div class="log-list">${list.map(l =>
-    `<div class="log-entry"><span class="log-date">${niceD(parseD(l.date))}</span><span class="log-text">${esc(l.text)}</span><button class="btn ghost sm" data-logdel="${esc(l.id)}" title="Delete this note" aria-label="Delete this note">✕</button></div>`).join('')}</div></div>`;
+function svcEntry(date, text, auto) {
+  return { id: uid(), date, text, at: new Date().toISOString(), by: sbUser ? sbUser.email : '', ...(auto ? { auto: true } : {}) };
+}
+function quickNotesBlock(u) {
+  if (!u.notes && PUBLIC) return '';
+  return `<div class="usec wide qn" data-qn>
+    <div class="usec-head"><h4>Quick notes</h4>${PUBLIC ? '' : `<button class="linkbtn sm" type="button" data-qnedit>${u.notes ? 'Edit' : 'Add'}</button>`}</div>
+    ${u.notes ? `<div class="notes">${esc(u.notes)}</div>` : '<div class="none">Nothing yet. Add what someone should know before working on this unit.</div>'}
+  </div>`;
+}
+function serviceBlock(u) {
+  if (PUBLIC) return '';
+  const list = (u.log || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.at || '').localeCompare(String(a.at || '')));
+  return `<div class="usec wide svc">
+    <div class="usec-head"><h4>Service record${list.length ? ` <span class="gcount">${list.length}</span>` : ''}</h4></div>
+    <form class="svc-add" data-svcform>
+      <input type="date" name="date" value="${fmtD(today())}" aria-label="Date of the work" required>
+      <input type="text" name="text" placeholder="What was done, like “Replaced supply fan belt”" aria-label="What was done" enterkeyhint="done" required>
+      <button class="btn sm primary" type="submit">Add</button>
+    </form>
+    ${list.length ? `<div class="log-list">${list.map(l =>
+      `<div class="log-entry${l.auto ? ' auto' : ''}"><span class="log-date">${niceD(parseD(l.date))}</span><span class="log-text">${esc(l.text)}</span><button class="btn ghost sm" type="button" data-logdel="${esc(l.id)}" title="Delete this record" aria-label="Delete this record">✕</button></div>`).join('')}</div>`
+      : '<div class="none">No work recorded yet.</div>'}
+  </div>`;
 }
 
 /* ---------- helpers ---------- */
@@ -545,16 +568,17 @@ function unitCard(u, d, sort) {
       ${coolLine(u)}
       ${pill}
     </button>
+    ${u.notes ? `<div class="uqn" title="Quick notes"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg><span>${esc(u.notes.split(/\n/)[0])}</span></div>` : ''}
     <div class="uparts">
       ${hasF ? `<span class="pset"><span class="plabel">Filters</span>${u.filters.map(filterChip).join('')}</span>` : '<span class="none">No filters listed</span>'}
       ${hasB ? `<span class="pset"><span class="plabel">Belts</span>${u.belts.map(beltChip).join('')}</span>` : ''}
     </div>
     <div class="ubody"><div class="ubody-in"><div class="ubody-pad">
+      ${quickNotesBlock(u)}
       ${sched ? `<div class="usec"><h4>Change schedule</h4>${sched}</div>` : ''}
       ${hasB ? '' : '<div class="usec"><h4>Belts</h4><div class="none">None listed, or direct drive</div></div>'}
       ${plateBlock(u)}
-      ${u.notes ? `<div class="usec wide"><h4>Notes</h4><div class="notes">${esc(u.notes)}</div></div>` : ''}
-      ${logBlock(u)}
+      ${serviceBlock(u)}
       ${PUBLIC ? '' : `<div class="actions">
         ${hasF ? `<button class="btn sm" data-act="fdone">Filters changed this month</button>` : ''}
         ${hasB ? `<button class="btn sm" data-act="bdone">Belts changed this month</button>` : ''}
@@ -786,8 +810,23 @@ function renderNotes() {
 
 /* ---------- modal ---------- */
 const modal = $('#modal');
-function openModal(html, narrow) { document.documentElement.classList.add('modal-open'); modal.scrollTop = 0; modal.innerHTML = `<div class="dialog${narrow ? ' narrow' : ''}">${html}</div>`; modal.classList.add('open'); const f = modal.querySelector('[autofocus]'); if (f) f.focus(); }
-function closeModal() { modal.classList.remove('open'); modal.innerHTML = ''; document.documentElement.classList.remove('modal-open'); }
+function openModal(html, narrow) { fitModal(); modal.scrollTop = 0; modal.innerHTML = `<div class="dialog${narrow ? ' narrow' : ''}">${html}</div>`; modal.classList.add('open'); const f = modal.querySelector('[autofocus]'); if (f) f.focus(); }
+function closeModal() { modal.classList.remove('open'); modal.innerHTML = ''; }
+/* Phones: keep the open window inside the part of the screen the keyboard doesn't cover,
+   and bring whatever box you tap into view once the keyboard is up. */
+const vv = window.visualViewport;
+function fitModal() {
+  if (!vv) return;
+  modal.style.top = vv.offsetTop + 'px';
+  modal.style.height = vv.height + 'px';
+}
+if (vv) { vv.addEventListener('resize', fitModal); vv.addEventListener('scroll', fitModal); }
+const isTouch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if (!isTouch || !el.matches || !el.matches('input:not([type=checkbox]):not([type=radio]), textarea, select')) return;
+  setTimeout(() => { if (document.activeElement === el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 320);
+});
 modal.addEventListener('mousedown', e => { if (e.target === modal) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
 
@@ -860,7 +899,7 @@ function editUnit(id, copyFrom) {
           <p class="hint">Make and model are at the top of this form.</p>
           <datalist id="refList"><option>R-410A</option><option>R-22</option><option>R-454B</option><option>R-32</option><option>R-407C</option></datalist>
         </fieldset>
-        <div class="f" style="margin-top:14px"><label>Notes</label><textarea name="notes" rows="2" placeholder="Access, ladder needed, filter rack quirks…">${esc(u.notes)}</textarea></div>
+        <div class="f" style="margin-top:14px"><label>Quick notes</label><textarea name="notes" rows="3" placeholder="What someone should know before working on it: access, ladder needed, filter rack quirks…">${esc(u.notes)}</textarea><p class="hint" style="margin-top:2px">Everyone who opens the site sees quick notes. Work done goes in the service record, which only signed-in users see.</p></div>
         <div class="err" id="ferr"></div>
       </div>
       <div class="dfoot"><button type="button" class="btn" data-m="cancel">Cancel</button><button type="submit" class="btn primary">${id ? 'Save changes' : 'Add unit'}</button></div>
@@ -956,7 +995,22 @@ $('#list').addEventListener('click', e => {
   const ld = e.target.closest('[data-logdel]');
   if (ld && !PUBLIC) {
     const u = S.units.find(x => x.id === ld.closest('.unit').dataset.id);
-    confirmBox('Delete note?', '<p style="margin:0">Remove this note from the unit’s log?</p>', 'Delete', () => { u.log = (u.log || []).filter(l => l.id !== ld.dataset.logdel); render(); persist(); });
+    confirmBox('Delete this record?', '<p style="margin:0">Remove this entry from the unit’s service record?</p>', 'Delete', () => { u.log = (u.log || []).filter(l => l.id !== ld.dataset.logdel); render(); persist(); });
+    return;
+  }
+  const qe = e.target.closest('[data-qnedit]');
+  if (qe && !PUBLIC) {
+    const box = qe.closest('[data-qn]'), u = S.units.find(x => x.id === qe.closest('.unit').dataset.id);
+    box.innerHTML = `<div class="usec-head"><h4>Quick notes</h4></div>
+      <textarea rows="3" data-qntext placeholder="What someone should know before working on this unit">${esc(u.notes || '')}</textarea>
+      <div class="qn-actions"><button class="btn sm" type="button" data-qncancel>Cancel</button><button class="btn sm primary" type="button" data-qnsave>Save</button></div>`;
+    const ta = box.querySelector('textarea'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+    return;
+  }
+  if (e.target.closest('[data-qncancel]')) { renderUnits(); return; }
+  if (e.target.closest('[data-qnsave]')) {
+    const box = e.target.closest('[data-qn]'), u = S.units.find(x => x.id === box.closest('.unit').dataset.id);
+    u.notes = box.querySelector('[data-qntext]').value.trim(); render(); persist(); toast('Quick notes saved.');
     return;
   }
   const card = e.target.closest('.unit');
@@ -983,6 +1037,16 @@ $('#list').addEventListener('click', e => {
   const open = card.classList.toggle('open');
   card.querySelector('.urow').setAttribute('aria-expanded', String(open));
   if (open) openUnits.add(card.dataset.id); else openUnits.delete(card.dataset.id);
+});
+$('#list').addEventListener('submit', e => {
+  const f = e.target.closest('[data-svcform]'); if (!f || PUBLIC) return;
+  e.preventDefault();
+  const text = f.elements.text.value.trim(); if (!text) { f.elements.text.focus(); return; }
+  const u = S.units.find(x => x.id === f.closest('.unit').dataset.id); if (!u) return;
+  const entry = svcEntry(f.elements.date.value || fmtD(today()), text);
+  u.log = (u.log || []).concat(entry);
+  render(); persist();
+  toast(`Added to ${u.name}'s service record.`, () => { u.log = (u.log || []).filter(l => l.id !== entry.id); render(); persist(); toast('Undone.'); });
 });
 $('#typeChips').addEventListener('click', e => {
   const c = e.target.closest('.tchip'); if (!c) return;
