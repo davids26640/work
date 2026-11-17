@@ -3,29 +3,35 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Filter &amp; Belt Tracker</title>
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101a25" media="(prefers-color-scheme: dark)">
+<title>HVAC Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>
+<header class="masthead">
   <div class="wrap">
     <div class="top">
       <div class="brand">
-        <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
-          <circle cx="20" cy="20" r="18" fill="none" stroke="#0072ce" stroke-width="2.5"/>
-          <path d="M11 14h18M11 20h18M11 26h18" stroke="#111418" stroke-width="2.4" stroke-linecap="round"/>
-          <path d="M15 12v16M20 12v16M25 12v16" stroke="#0072ce" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
+        <svg class="mark" width="36" height="36" viewBox="0 0 40 40" aria-hidden="true">
+          <circle class="mark-ring" cx="20" cy="20" r="18" fill="none" stroke-width="2.5"/>
+          <path class="mark-bars" d="M11 14h18M11 20h18M11 26h18" stroke-width="2.4" stroke-linecap="round"/>
+          <path class="mark-pleats" d="M15 12v16M20 12v16M25 12v16" stroke-width="1.6" stroke-linecap="round"/>
         </svg>
         <div>
-          <h1>Filter &amp; Belt Tracker</h1>
-          <p>Air handlers, rooftop units &amp; everything else with a filter rack</p>
+          <h1>HVAC Tracker</h1>
+          <p>Every air handler, rooftop unit and heater in the building</p>
         </div>
       </div>
       <div class="top-right">
-        <button class="btn edit-only claude-only" id="githubBtn" title="Make the public, date-free data.js for your GitHub site">⇪ Copy for GitHub</button>
+        <div class="save" id="save"><span class="dot"></span><span id="saveText">Loading…</span></div>
+        <button class="btn edit-only claude-only" id="githubBtn" title="Make the public, date-free data.js for your GitHub site">Copy for GitHub</button>
         <button class="btn web-only" id="signInBtn" hidden>Sign in</button>
         <span class="user-chip" id="userChip" hidden><span id="userEmail"></span><button class="btn sm" id="signOutBtn">Sign out</button></span>
-        <div class="save" id="save"><span class="dot"></span><span id="saveText">Loading…</span></div>
       </div>
     </div>
     <div class="stats">
@@ -33,60 +39,81 @@
       <button class="stat bad edit-only" data-stat="overdue"><b id="stOver">0</b><span>Overdue</span></button>
       <button class="stat soon edit-only" data-stat="soon"><b id="stSoon">0</b><span>Due this month</span></button>
       <button class="stat public-only" data-stat="belts"><b id="stBelts">0</b><span>Belts installed</span></button>
-      <button class="stat public-only" data-stat="cool"><b id="stCool">—</b><span>Avg ash cooling</span></button>
+      <button class="stat public-only" data-stat="cool"><b id="stCool">—</b><span>Average ash house cooling</span></button>
       <button class="stat" data-stat="filters"><b id="stFilters">0</b><span>Filters installed</span></button>
     </div>
   </div>
 </header>
 
-<main class="wrap">
-  <div class="tabs" role="tablist">
-    <button class="tab" role="tab" data-view="units" aria-selected="true">Units</button>
-    <button class="tab" role="tab" data-view="totals" aria-selected="false">Filter totals</button>
-    <button class="tab" role="tab" data-view="belts" aria-selected="false">Belt totals</button>
-    <button class="tab" role="tab" data-view="parts" aria-selected="false">Parts list</button>
-    <button class="tab" role="tab" data-view="notes" aria-selected="false">Notes</button>
-    <button class="tab edit-only" role="tab" data-view="today" aria-selected="false">Today's notes</button>
+<nav class="tabbar" aria-label="Sections">
+  <div class="wrap">
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" data-view="units" aria-selected="true">Units</button>
+      <button class="tab" role="tab" data-view="totals" aria-selected="false">Filters</button>
+      <button class="tab" role="tab" data-view="belts" aria-selected="false">Belts</button>
+      <button class="tab" role="tab" data-view="parts" aria-selected="false">Parts list</button>
+      <button class="tab" role="tab" data-view="notes" aria-selected="false">Notes</button>
+      <button class="tab edit-only" role="tab" data-view="today" aria-selected="false">Today's notes</button>
+      <span class="tab-ink" id="tabInk" aria-hidden="true"></span>
+    </div>
   </div>
+</nav>
 
+<main class="wrap">
   <!-- Units -->
   <section id="view-units">
-    <div class="toolbar">
-      <input class="grow" type="search" id="q" placeholder="Search unit, location, filter size, belt…">
-      <select id="fType"><option value="">All types</option></select>
-      <select id="fRoute"><option value="">All routes / groups</option></select>
-      <select id="fStatus" class="edit-only">
-        <option value="">Any status</option>
-        <option value="overdue">Overdue</option>
-        <option value="soon">Due this month</option>
-        <option value="ok">Up to date</option>
-        <option value="unknown">No date set</option>
-      </select>
-      <select id="fCool">
-        <option value="">Any cooling</option>
-        <option value="set">Has a cooling %</option>
-        <option value="full">100% cooling</option>
-        <option value="part">Partial (1–99%)</option>
-        <option value="none">0% cooling</option>
-        <option value="na">Cooling N/A</option>
-      </select>
-      <select id="sort">
-        <option value="due">Sort: next due</option>
-        <option value="name">Sort: name</option>
-        <option value="route">Sort: route / group</option>
-        <option value="loc">Sort: location</option>
-        <option value="cool">Sort: cooling (lowest first)</option>
-      </select>
-      <button class="btn edit-only" id="selectBtn">Select…</button>
-      <button class="btn primary edit-only" id="addBtn">+ Add unit</button>
+    <div class="finder">
+      <label class="searchbox grow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="q" placeholder="Search a unit, filter size, belt or serial number" aria-label="Search units">
+      </label>
+      <button class="btn" id="filterToggle" aria-expanded="false" aria-controls="filters">Filter <span class="fcount" id="filterCount" hidden>0</span></button>
+      <button class="btn edit-only" id="selectBtn">Select</button>
+      <button class="btn primary edit-only" id="addBtn">Add unit</button>
+    </div>
+    <div class="typechips" id="typeChips" role="group" aria-label="Unit type"></div>
+    <div class="filters" id="filters">
+      <div class="filters-in">
+        <label class="fsel"><span>Route or group</span><select id="fRoute"><option value="">All routes</option></select></label>
+        <label class="fsel edit-only"><span>Change status</span>
+          <select id="fStatus">
+            <option value="">Any status</option>
+            <option value="overdue">Overdue</option>
+            <option value="soon">Due this month</option>
+            <option value="ok">Up to date</option>
+            <option value="unknown">No date set</option>
+          </select></label>
+        <label class="fsel"><span>Cooling capacity</span>
+          <select id="fCool">
+            <option value="">Any cooling</option>
+            <option value="set">Has a cooling figure</option>
+            <option value="full">Full (100%)</option>
+            <option value="part">Partial (1–99%)</option>
+            <option value="none">None (0%)</option>
+            <option value="na">Not applicable</option>
+          </select></label>
+      </div>
+    </div>
+    <div class="resultline">
+      <span id="resultCount"></span>
+      <button class="linkbtn" id="clearFilters" hidden>Clear filters</button>
+      <span class="spacer"></span>
+      <label class="arrange"><span>Arrange by</span>
+        <select id="sort">
+          <option value="group">Type and route</option>
+          <option value="due">Next change due</option>
+          <option value="loc">Location</option>
+          <option value="cool">Cooling capacity</option>
+          <option value="name">Name</option>
+        </select></label>
     </div>
     <div class="bulkbar" id="bulkbar" hidden>
       <b id="bulkCount">Tap units to select them</b>
       <button class="btn sm" id="bulkAll">Select all shown</button>
       <button class="btn sm" id="bulkClear">Clear</button>
       <span class="spacer"></span>
-      <button class="btn sm primary" id="bulkF">✓ Filters changed this month</button>
-      <button class="btn sm primary" id="bulkB">✓ Belts changed this month</button>
+      <button class="btn sm primary" id="bulkF">Filters changed this month</button>
+      <button class="btn sm primary" id="bulkB">Belts changed this month</button>
     </div>
     <div class="list" id="list"></div>
   </section>
@@ -97,22 +124,25 @@
       <div class="tile"><b id="tSizes">0</b><span>Filter sizes</span></div>
       <div class="tile"><b id="tUse">0</b><span>Needed for a full change</span></div>
       <div class="tile"><b id="tStock">0</b><span>In stock</span></div>
-      <div class="tile short"><b id="tOrder">0</b><span>Short / to order</span></div>
+      <div class="tile short"><b id="tOrder">0</b><span>Short, to order</span></div>
     </div>
-    <div class="toolbar">
-      <input class="grow" type="search" id="tq" placeholder="Search size or type…">
-      <label class="check"><input type="checkbox" id="tShort"> Only show what we're short on</label>
+    <div class="finder">
+      <label class="searchbox grow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="tq" placeholder="Search a filter size or type" aria-label="Search filters">
+      </label>
+      <label class="check"><input type="checkbox" id="tShort"> Only what we're short on</label>
       <button class="btn" id="copyOrder">Copy order list</button>
     </div>
-    <div id="totals"></div>
+    <div class="tablewrap" id="totals"></div>
     <form class="addstock edit-only" id="addStock">
-      <h4>Add a spare filter size we keep in stock (not used in any unit yet)</h4>
+      <h4>Add a spare filter size kept in stock but not used in any unit yet</h4>
       <div class="f"><label>Size</label><input type="text" name="size" placeholder="20x20x4" required></div>
       <div class="f"><label>Type</label><input type="text" name="kind" list="kindList" placeholder="Pleated" value="Pleated"></div>
       <div class="f"><label>In stock</label><input type="number" min="0" name="qty" value="0"></div>
       <button class="btn" type="submit">Add</button>
     </form>
-    <p class="hint">Counts are individual filters. Bags come 5 per box. "Needed" is how many it takes to change every filter in every unit once. Marking filters changed on a unit takes them out of stock.</p>
+    <p class="hint">Counts are individual filters, and bags come 5 per box. "Needed" is how many it takes to change every filter in every unit once. Marking filters changed on a unit takes them out of stock.</p>
   </section>
 
   <!-- Belt totals -->
@@ -121,17 +151,20 @@
       <div class="tile"><b id="bSizes">0</b><span>Belt sizes</span></div>
       <div class="tile"><b id="bUse">0</b><span>Needed for a full change</span></div>
       <div class="tile"><b id="bStock">0</b><span>In stock</span></div>
-      <div class="tile short"><b id="bOrder">0</b><span>Short / to order</span></div>
+      <div class="tile short"><b id="bOrder">0</b><span>Short, to order</span></div>
     </div>
-    <div class="toolbar">
-      <input class="grow" type="search" id="bq" placeholder="Search belt size or unit…">
-      <label class="check"><input type="checkbox" id="bShort"> Only show what we're short on</label>
+    <div class="finder">
+      <label class="searchbox grow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="bq" placeholder="Search a belt size or unit" aria-label="Search belts">
+      </label>
+      <label class="check"><input type="checkbox" id="bShort"> Only what we're short on</label>
       <button class="btn" id="copyBeltOrder">Copy order list</button>
     </div>
-    <div id="btotals"></div>
+    <div class="tablewrap" id="btotals"></div>
     <form class="addstock belt edit-only" id="addBeltStock">
-      <h4>Add a spare belt size we keep in stock (not used in any unit yet)</h4>
-      <div class="f"><label>Belt size / part #</label><input type="text" name="size" placeholder="B75" required></div>
+      <h4>Add a spare belt size kept in stock but not used in any unit yet</h4>
+      <div class="f"><label>Belt size or part number</label><input type="text" name="size" placeholder="B75" required></div>
       <div class="f"><label>In stock</label><input type="number" min="0" name="qty" value="0"></div>
       <button class="btn" type="submit">Add</button>
     </form>
@@ -140,17 +173,17 @@
 
   <!-- Parts list -->
   <section id="view-parts" hidden>
-    <div class="toolbar">
-      <label for="pScope" class="edit-only" style="font-weight:600;font-size:14px">Include</label>
-      <select id="pScope" class="edit-only">
-        <option value="all">All units</option>
-        <option value="month">Due this month or overdue</option>
-        <option value="next">Due by next month</option>
-        <option value="overdue">Overdue units only</option>
-      </select>
+    <div class="finder">
+      <label class="arrange edit-only"><span>Include</span>
+        <select id="pScope">
+          <option value="all">All units</option>
+          <option value="month">Due this month or overdue</option>
+          <option value="next">Due by next month</option>
+          <option value="overdue">Overdue units only</option>
+        </select></label>
       <span class="grow"></span>
       <button class="btn" id="copyParts">Copy list</button>
-      <button class="btn edit-only" id="backupBtn">Backup / restore</button>
+      <button class="btn edit-only" id="backupBtn">Backup or restore</button>
     </div>
     <div id="parts"></div>
   </section>
@@ -159,17 +192,14 @@
   <section id="view-today" hidden>
     <div class="today-grid">
       <div class="today-input">
-        <div class="toolbar" style="margin-bottom:8px">
-          <label for="todayDate" style="font-weight:600;font-size:14px">Date</label>
-          <input type="date" id="todayDate" style="width:auto">
-        </div>
+        <label class="arrange" style="margin-bottom:10px"><span>Date</span><input type="date" id="todayDate"></label>
         <textarea id="todayText" rows="12" placeholder="RTU 08&#10;Replaced supply fan belt&#10;&#10;Ash 12&#10;Needs pleats, bags changed"></textarea>
-        <p class="hint">Put the unit name on its own line, then the notes for it on the lines below. Start the next unit on a new line. You can also write it on one line, like <b>RTU 08: replaced belt</b>.</p>
+        <p class="hint">Put the unit name on its own line, then the notes for it on the lines below. Leave a blank line before the next unit. One line works too, like <b>RTU 08: replaced belt</b>.</p>
         <div class="today-actions"><button class="btn" id="todayClear">Clear</button><button class="btn primary" id="todayApply" disabled>Add to units</button></div>
       </div>
       <div class="today-preview">
-        <h3 class="section-title" style="margin-top:0">Preview</h3>
-        <div id="todayPreview"><p class="none">Start typing and you'll see which unit each note goes to.</p></div>
+        <h3 class="section-title" style="margin-top:0">Where each note will go</h3>
+        <div id="todayPreview"><p class="none">Start typing and each note shows up here under its unit.</p></div>
       </div>
     </div>
     <h3 class="section-title">Recent notes</h3>
@@ -185,7 +215,7 @@
     <form class="note-form" id="noteForm">
       <textarea name="text" class="edit-only" placeholder="Write a cooling note…" required></textarea>
       <input type="text" name="unit" class="edit-only" list="unitList" placeholder="Unit (optional)">
-      <input type="search" id="nq" placeholder="Search notes…">
+      <input type="search" id="nq" placeholder="Search notes">
       <div class="nf-foot edit-only"><button class="btn primary" type="submit">Add note</button></div>
     </form>
     <div class="notes-list" id="notesList"></div>

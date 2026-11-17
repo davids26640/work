@@ -1,4 +1,4 @@
-/* Filter & Belt Tracker — app code. Data lives in data.js (window.TRACKER_DATA). */
+/* HVAC Tracker: app code. Data lives in data.js (window.TRACKER_DATA). */
 (function () {
 'use strict';
 
@@ -6,6 +6,7 @@ const LS_KEY = 'filter-belt-tracker-v2';
 const TYPES = ['ASH', 'AHU', 'RTU', 'MAU', 'King Heater', 'Other'];
 const TYPE_NAMES = { ASH: 'Ash house', AHU: 'Air handler', RTU: 'Rooftop unit', MAU: 'Make-up air', 'King Heater': 'King Heater', Other: 'Other' };
 const typeLabel = t => TYPE_NAMES[t] && TYPE_NAMES[t] !== t ? `${t} — ${TYPE_NAMES[t]}` : t;
+const TYPE_PLURAL = { ASH: 'Ash houses', AHU: 'Air handlers', RTU: 'Rooftop units', MAU: 'Make-up air units', 'King Heater': 'King heaters', Other: 'Other equipment' };
 const NOTE_KINDS = { cooling: 'Cooling', heating: 'Heating' };
 
 const $ = s => document.querySelector(s);
@@ -32,6 +33,24 @@ let S = normalize(window.TRACKER_DATA);
 let mode = 'local', artifactApi = null, readOnly = false, saveTimer = null;
 let view = 'units', noteTab = 'cooling';
 let selectMode = false, selected = new Set(), lastShown = [], toastTimer = null;
+let typeFilter = '', openUnits = new Set(), closedGroups = new Set(), listEnter = true;
+const reduceMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+/* Show a number, counting up or down to it when it changes. */
+function setFig(sel, value, suffix) {
+  const el = $(sel), to = Number(value), sfx = suffix || '';
+  cancelAnimationFrame(el._raf);
+  if (value == null || isNaN(to)) { el.textContent = '—'; delete el.dataset.v; return; }
+  const from = el.dataset.v == null ? 0 : Number(el.dataset.v);
+  el.dataset.v = to;
+  if (reduceMotion || from === to || document.hidden) { el.textContent = num(to) + sfx; return; }
+  const t0 = performance.now(), dur = 520;
+  const step = now => {
+    const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = num(Math.round(from + (to - from) * e)) + sfx;
+    if (k < 1) el._raf = requestAnimationFrame(step);
+  };
+  el._raf = requestAnimationFrame(step);
+}
 
 function lastOf(u, part) { return (part === 'belts' ? u.beltLast : u.filterLast) || ''; }
 /* Mark filters or belts changed on one or more units. Takes the parts out of stock
@@ -106,7 +125,7 @@ function unitDue(u) {
 }
 function relText(i) {
   if (i.due == null) return 'No date set';
-  if (i.late >= 1) return `Overdue · was due ${fmtMonth(i.due)}`;
+  if (i.late >= 1) return `Overdue, was due ${fmtMonth(i.due)}`;
   if (i.late === 0) return 'Due this month';
   if (i.late === -1) return 'Due next month';
   return `Due ${fmtMonth(i.due)}`;
@@ -118,13 +137,13 @@ function lsSet() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catc
 function setStatus(text, cls) { $('#saveText').textContent = text; $('#save').className = 'save' + (cls ? ' ' + cls : ''); }
 
 function dataJs() {
-  return '/* Filter & Belt Tracker data. The page rewrites this file when you save. */\n' +
+  return '/* HVAC Tracker data. The page rewrites this file when you save. */\n' +
     'window.TRACKER_DATA = ' + JSON.stringify(S, null, 1).replace(/</g, '\\u003c') + ';\n';
 }
 function publicDataJs() {
   const pub = { public: true, exportedAt: new Date().toISOString(),
     units: S.units.map(({ filterLast, beltLast, ...u }) => u), stock: S.stock, beltStock: S.beltStock, notes: S.notes };
-  return '/* Filter & Belt Tracker: public copy for GitHub. View-only, with no change dates.\n   Made with "Copy for GitHub" on ' + new Date().toLocaleString() + ' */\n' +
+  return '/* HVAC Tracker: public copy for GitHub. View-only, with no change dates.\n   Made with "Copy for GitHub" on ' + new Date().toLocaleString() + ' */\n' +
     'window.TRACKER_DATA = ' + JSON.stringify(pub, null, 1).replace(/</g, '\\u003c') + ';\n';
 }
 function githubBox() {
@@ -228,7 +247,7 @@ async function loadPrivate() {
   const { data, error } = await sb.from('tracker_private').select('doc, version').eq('id', 1).maybeSingle();
   if (error || !data) return false;
   S = normalize(data.doc); sbVersion = data.version;
-  PUBLIC = false; applyMode(); render();
+  PUBLIC = false; listEnter = true; applyMode(); render();
   $('#toast').hidden = true;
   setStatus('All changes saved');
   return true;
@@ -262,7 +281,8 @@ function applyMode() {
   document.body.classList.toggle('public', PUBLIC);
   const o = $('#sort option[value=due]');
   o.hidden = o.disabled = PUBLIC;
-  if (PUBLIC && $('#sort').value === 'due') $('#sort').value = 'name';
+  if (PUBLIC && $('#sort').value === 'due') $('#sort').value = 'group';
+  placeInk();
   if (PUBLIC && view === 'today') go('units');
 }
 function pwField(name, label, ac, extra) {
@@ -411,8 +431,8 @@ function applyToday() {
 function logBlock(u) {
   if (PUBLIC || !(u.log || []).length) return '';
   const list = u.log.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.at || '').localeCompare(String(a.at || '')));
-  return `<details class="plate log"><summary>Notes log (${list.length}) · latest ${niceD(parseD(list[0].date))}</summary><div class="log-list">${list.map(l =>
-    `<div class="log-entry"><span class="log-date">${niceD(parseD(l.date))}</span><span class="log-text">${esc(l.text)}</span><button class="btn ghost sm" data-logdel="${esc(l.id)}" title="Delete this note">✕</button></div>`).join('')}</div></details>`;
+  return `<div class="usec wide"><h4>Notes log (${list.length})</h4><div class="log-list">${list.map(l =>
+    `<div class="log-entry"><span class="log-date">${niceD(parseD(l.date))}</span><span class="log-text">${esc(l.text)}</span><button class="btn ghost sm" data-logdel="${esc(l.id)}" title="Delete this note" aria-label="Delete this note">✕</button></div>`).join('')}</div></div>`;
 }
 
 /* ---------- helpers ---------- */
@@ -429,29 +449,30 @@ function coolVal(u) { const c = u.cooling; if (c === 'N/A') return 'N/A'; return
 function coolClass(v) { return v === 'N/A' ? 'na' : v >= 100 ? 'full' : v >= 50 ? 'part' : v > 0 ? 'low' : 'none'; }
 function coolLine(u) {
   const v = coolVal(u); if (v === null) return '';
-  const pct = v === 'N/A' ? 0 : Math.max(0, Math.min(100, v));
-  return `<div class="cool c-${coolClass(v)}"><span class="cool-lbl">Cooling capacity</span><span class="cool-bar"><i style="width:${pct}%"></i></span><b>${v === 'N/A' ? 'N/A' : v + '%'}</b></div>`;
+  const pct = v === 'N/A' ? 0 : Math.max(0, Math.min(100, v)), txt = v === 'N/A' ? 'N/A' : v + '%';
+  return `<span class="cool c-${coolClass(v)}" title="Cooling capacity ${txt}"><span class="cool-bar"><i style="width:${pct}%"></i></span><b>${txt}</b></span>`;
 }
 const PLATE = [['serial', 'Serial'], ['coolingSize', 'Cooling size'], ['heatingInput', 'Heating input'],
   ['refrigerant', 'Refrigerant'], ['refCharge', 'Refrigerant charge'], ['mfgDate', 'Manufactured']];
 function plateBlock(u) {
   const rows = [['Make', u.make], ['Model', u.model], ...PLATE.map(([k, l]) => [l, u[k]])].filter(([, v]) => v);
-  if (!PLATE.some(([k]) => u[k])) return '';
-  return `<details class="plate"><summary>Data plate</summary><dl>${rows.map(([l, v]) => `<dt>${esc(l)}</dt><dd${/^(Model|Serial)$/.test(l) ? ' class="mono"' : ''}>${esc(v)}</dd>`).join('')}</dl></details>`;
+  if (!rows.length) return '';
+  return `<div class="usec"><h4>Data plate</h4><dl class="plate">${rows.map(([l, v]) => `<dt>${esc(l)}</dt><dd${/^(Model|Serial)$/.test(l) ? ' class="mono"' : ''}>${esc(v)}</dd>`).join('')}</dl></div>`;
 }
 function filterChip(f) {
-  const extra = [f.merv ? 'MERV ' + f.merv : '', f.kind].filter(Boolean).join(' · ');
+  const extra = [f.merv ? 'MERV ' + f.merv : '', f.kind].filter(Boolean).join(', ');
   return `<span class="chip">${esc(f.size || '?')} ×${esc(f.qty || 1)}${extra ? `<small>${esc(extra)}</small>` : ''}</span>`;
 }
 function beltChip(b) { return `<span class="chip">${esc(b.size || '?')} ×${esc(b.qty || 1)}${b.note ? `<small>${esc(b.note)}</small>` : ''}</span>`; }
 function schedLine(label, last, months, has) {
   if (!has) return '';
-  if (PUBLIC) return months ? `<div class="sched"><b>${label}:</b> changed every ${esc(months)} mo</div>` : '';
-  const i = dueInfo(last, months), parts = [`<b>${label}:</b>`];
-  parts.push(last ? 'last ' + niceMonth(last) : 'no last-change date');
-  if (months) parts.push(`every ${esc(months)} mo`);
-  if (i.due != null) parts.push(`next <b>${fmtMonth(i.due)}</b> <span class="pill p-${i.status}">${relText(i)}</span>`);
-  return `<div class="sched">${parts.join(' · ')}</div>`;
+  const every = months ? `every ${esc(months)} month${+months === 1 ? '' : 's'}` : '';
+  if (PUBLIC) return every ? `<div class="sched"><b>${label}</b> changed ${every}</div>` : '';
+  const i = dueInfo(last, months), parts = [];
+  parts.push(last ? 'last changed ' + niceMonth(last) : 'no change date yet');
+  if (every) parts.push(every);
+  if (i.due != null) parts.push(`next ${fmtMonth(i.due)}`);
+  return `<div class="sched"><b>${label}</b> ${parts.join(', ')}${i.due != null ? ` <span class="pill p-${i.status}">${relText(i)}</span>` : ''}</div>`;
 }
 function searchText(u) {
   const cv = coolVal(u);
@@ -464,79 +485,133 @@ function searchText(u) {
 /* ---------- render ---------- */
 function render() {
   const ds = S.units.map(unitDue);
-  $('#stUnits').textContent = S.units.length;
-  $('#stOver').textContent = ds.filter(d => d.status === 'overdue').length;
-  $('#stSoon').textContent = ds.filter(d => d.status === 'soon').length;
-  $('#stBelts').textContent = num(S.units.reduce((n, u) => n + (u.belts || []).reduce((a, b) => a + (+b.qty || 0), 0), 0));
+  setFig('#stUnits', S.units.length);
+  setFig('#stOver', ds.filter(d => d.status === 'overdue').length);
+  setFig('#stSoon', ds.filter(d => d.status === 'soon').length);
+  setFig('#stBelts', S.units.reduce((n, u) => n + (u.belts || []).reduce((a, b) => a + (+b.qty || 0), 0), 0));
   const cvs = S.units.filter(u => u.type === 'ASH').map(coolVal).filter(v => typeof v === 'number');
-  $('#stCool').textContent = cvs.length ? Math.round(cvs.reduce((a, v) => a + v, 0) / cvs.length) + '%' : '—';
-  $('#stFilters').textContent = num(S.units.reduce((n, u) => n + (u.filters || []).reduce((a, f) => a + (+f.qty || 0), 0), 0));
+  setFig('#stCool', cvs.length ? Math.round(cvs.reduce((a, v) => a + v, 0) / cvs.length) : null, '%');
+  setFig('#stFilters', S.units.reduce((n, u) => n + (u.filters || []).reduce((a, f) => a + (+f.qty || 0), 0), 0));
   const routes = [...new Set(S.units.map(u => u.route).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   $('#routeList').innerHTML = routes.map(r => `<option value="${esc(r)}">`).join('');
   const fr = $('#fRoute'), cur = fr.value;
-  fr.innerHTML = '<option value="">All routes / groups</option>' + routes.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  fr.innerHTML = '<option value="">All routes</option>' + routes.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
   fr.value = routes.includes(cur) ? cur : '';
   ({ units: renderUnits, totals: renderTotals, belts: renderBeltTotals, parts: renderParts, notes: renderNotes, today: renderToday })[view]();
 }
 
+/* Sections for the unit list. "group" = by type (ash houses split by route). */
+function groupRows(rows, sort) {
+  const byName = (a, b) => String(a.u.name).localeCompare(String(b.u.name), undefined, { numeric: true });
+  const groups = new Map();
+  const put = (title, order, r) => { let g = groups.get(title); if (!g) { g = { title, order, rows: [] }; groups.set(title, g); } g.rows.push(r); };
+  rows.forEach(r => {
+    const u = r.u;
+    if (sort === 'group') {
+      const ti = TYPES.indexOf(u.type) < 0 ? TYPES.length : TYPES.indexOf(u.type);
+      if (u.type === 'ASH') put('Ash houses' + (u.route ? ', ' + u.route : ''), [ti, u.route ? (/^route/i.test(u.route) ? 0 : 1) : 2, u.route || ''], r);
+      else put(TYPE_PLURAL[u.type] || TYPE_PLURAL.Other, [ti, 0, ''], r);
+    } else if (sort === 'due') {
+      const m = { overdue: [0, 'Overdue'], soon: [1, 'Due this month'], ok: [2, 'Coming up'] }[r.d.status] || [3, 'No change date set'];
+      put(m[1], [m[0]], r);
+    } else if (sort === 'loc') put(u.location || 'No location set', [u.location ? 0 : 1, u.location || ''], r);
+    else if (sort === 'cool') {
+      const v = coolVal(u);
+      const m = v === null ? [4, 'No cooling figure'] : v === 'N/A' ? [3, 'Cooling not applicable'] : v <= 0 ? [0, 'No cooling (0%)'] : v < 100 ? [1, 'Partial cooling'] : [2, 'Full cooling (100%)'];
+      put(m[1], [m[0]], r);
+    } else put('', [0], r);
+  });
+  const cmp = (a, b) => { for (let i = 0; i < Math.max(a.length, b.length); i++) { const x = a[i], y = b[i]; if (x === y) continue; return typeof x === 'number' ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); } return 0; };
+  const list = [...groups.values()].sort((a, b) => cmp(a.order, b.order));
+  list.forEach(g => g.rows.sort(sort === 'due' ? (a, b) => (a.d.due ?? Infinity) - (b.d.due ?? Infinity) || byName(a, b)
+    : sort === 'cool' ? (a, b) => (typeof coolVal(a.u) === 'number' ? coolVal(a.u) : 0) - (typeof coolVal(b.u) === 'number' ? coolVal(b.u) : 0) || byName(a, b) : byName));
+  return list;
+}
+function unitCard(u, d, sort) {
+  const hasF = (u.filters || []).length, hasB = (u.belts || []).length;
+  const picked = selectMode && selected.has(u.id), open = !selectMode && openUnits.has(u.id);
+  const sub = [sort === 'group' ? '' : u.route, u.location].filter(Boolean).map(esc).join(', ');
+  const lc = [lastOf(u, 'filters'), lastOf(u, 'belts')].filter(Boolean).sort().pop();
+  const pill = PUBLIC ? '' : d.due == null ? (lc ? `<span class="pill p-unknown">Changed ${niceMonth(lc)}</span>` : '') : `<span class="pill p-${d.status}">${relText(d)}</span>`;
+  const sched = schedLine('Filters', lastOf(u, 'filters'), u.filterInterval, hasF) + schedLine('Belts', lastOf(u, 'belts'), u.beltInterval, hasB);
+  return `<article class="unit s-${d.status}${picked ? ' picked' : ''}${open ? ' open' : ''}" data-id="${esc(u.id)}">
+    <button class="urow" type="button" aria-expanded="${open}">
+      ${selectMode ? `<input type="checkbox" class="pick" tabindex="-1" ${picked ? 'checked' : ''} aria-label="Select ${esc(u.name)}">` : '<span class="chev"></span>'}
+      <span class="utag">${esc(u.name)}</span>
+      ${sort === 'group' ? '' : `<span class="badge" title="${esc(TYPE_NAMES[u.type] || u.type)}">${esc(u.type || 'Other')}</span>`}
+      ${sub ? `<span class="usub">${sub}</span>` : ''}
+      <span class="spacer"></span>
+      ${coolLine(u)}
+      ${pill}
+    </button>
+    <div class="uparts">
+      ${hasF ? `<span class="pset"><span class="plabel">Filters</span>${u.filters.map(filterChip).join('')}</span>` : '<span class="none">No filters listed</span>'}
+      ${hasB ? `<span class="pset"><span class="plabel">Belts</span>${u.belts.map(beltChip).join('')}</span>` : ''}
+    </div>
+    <div class="ubody"><div class="ubody-in"><div class="ubody-pad">
+      ${sched ? `<div class="usec"><h4>Change schedule</h4>${sched}</div>` : ''}
+      ${hasB ? '' : '<div class="usec"><h4>Belts</h4><div class="none">None listed, or direct drive</div></div>'}
+      ${plateBlock(u)}
+      ${u.notes ? `<div class="usec wide"><h4>Notes</h4><div class="notes">${esc(u.notes)}</div></div>` : ''}
+      ${logBlock(u)}
+      ${PUBLIC ? '' : `<div class="actions">
+        ${hasF ? `<button class="btn sm" data-act="fdone">Filters changed this month</button>` : ''}
+        ${hasB ? `<button class="btn sm" data-act="bdone">Belts changed this month</button>` : ''}
+        <span class="spacer"></span>
+        <button class="btn sm" data-act="edit">Edit</button>
+        <button class="btn sm" data-act="dup">Duplicate</button>
+        <button class="btn sm danger" data-act="del">Delete</button>
+      </div>`}
+    </div></div></div>
+  </article>`;
+}
+function updateFinder(shown) {
+  const counts = {}; S.units.forEach(u => { counts[u.type] = (counts[u.type] || 0) + 1; });
+  const types = [...TYPES.filter(t => counts[t]), ...Object.keys(counts).filter(t => !TYPES.includes(t))];
+  if (typeFilter && !counts[typeFilter]) typeFilter = '';
+  $('#typeChips').innerHTML = [['', 'All', S.units.length], ...types.map(t => [t, TYPE_PLURAL[t] || t, counts[t]])]
+    .map(([t, label, n]) => `<button class="tchip" type="button" data-type="${esc(t)}" aria-pressed="${typeFilter === t}">${esc(label)} <i>${n}</i></button>`).join('');
+  const extra = [$('#fRoute').value, PUBLIC ? '' : $('#fStatus').value, $('#fCool').value].filter(Boolean).length;
+  $('#filterCount').hidden = !extra; $('#filterCount').textContent = extra;
+  const any = extra || typeFilter || $('#q').value.trim();
+  $('#clearFilters').hidden = !any;
+  const total = S.units.length;
+  $('#resultCount').textContent = any ? `${shown} of ${total} unit${total === 1 ? '' : 's'}` : `${total} unit${total === 1 ? '' : 's'}`;
+}
 function renderUnits() {
   const q = $('#q').value.trim().toLowerCase();
-  const ft = $('#fType').value, fs = PUBLIC ? '' : $('#fStatus').value, fc = $('#fCool').value, fr = $('#fRoute').value;
-  let sort = $('#sort').value; if (PUBLIC && sort === 'due') sort = 'name';
+  const fs = PUBLIC ? '' : $('#fStatus').value, fc = $('#fCool').value, fr = $('#fRoute').value;
+  let sort = $('#sort').value; if (PUBLIC && sort === 'due') sort = 'group';
   let rows = S.units.map(u => ({ u, d: unitDue(u) }));
   if (q) rows = rows.filter(r => q.split(/\s+/).every(t => searchText(r.u).includes(t)));
-  if (ft) rows = rows.filter(r => r.u.type === ft);
+  if (typeFilter) rows = rows.filter(r => r.u.type === typeFilter);
   if (fr) rows = rows.filter(r => r.u.route === fr);
   if (fs) rows = rows.filter(r => r.d.status === fs);
   if (fc) rows = rows.filter(r => { const v = coolVal(r.u);
     return fc === 'set' ? v !== null : fc === 'na' ? v === 'N/A' : typeof v === 'number' && (fc === 'full' ? v >= 100 : fc === 'none' ? v <= 0 : v > 0 && v < 100); });
-  const byName = (a, b) => String(a.u.name).localeCompare(String(b.u.name), undefined, { numeric: true });
-  if (sort === 'name') rows.sort(byName);
-  else if (sort === 'route') rows.sort((a, b) => String(a.u.route || '~').localeCompare(String(b.u.route || '~'), undefined, { numeric: true }) || byName(a, b));
-  else if (sort === 'loc') rows.sort((a, b) => String(a.u.location || '').localeCompare(String(b.u.location || ''), undefined, { numeric: true }) || byName(a, b));
-  else if (sort === 'cool') { const cv = r => { const v = coolVal(r.u); return typeof v === 'number' ? v : v === 'N/A' ? 1000 : 2000; }; rows.sort((a, b) => cv(a) - cv(b) || byName(a, b)); }
-  else rows.sort((a, b) => (a.d.due ?? Infinity) - (b.d.due ?? Infinity) || byName(a, b));
 
   lastShown = rows.map(r => r.u.id);
   updateBulkBar();
+  updateFinder(rows.length);
   const list = $('#list');
   list.classList.toggle('selecting', selectMode);
-  if (!S.units.length) { list.innerHTML = `<div class="empty"><h2>No units yet</h2><p><button class="btn primary" data-act="add">+ Add unit</button></p></div>`; return; }
-  if (!rows.length) { list.innerHTML = `<div class="empty"><h2>No matches</h2><p>Nothing fits that search or filter.</p></div>`; return; }
+  list.classList.toggle('enter', listEnter && !reduceMotion);
+  if (!S.units.length) { list.innerHTML = `<div class="empty"><h2>No units yet</h2>${PUBLIC ? '' : '<p><button class="btn primary" data-act="add">Add unit</button></p>'}</div>`; return; }
+  if (!rows.length) { list.innerHTML = `<div class="empty"><h2>No units match</h2><p>Try a different search, or clear the filters.</p></div>`; return; }
+  if (!selectMode) {   // open the unit when the search lands on exactly one, or names one exactly
+    const hit = rows.length === 1 ? rows[0] : q && rows.find(r => normUnit(r.u.name) === normUnit(q));
+    if (hit) openUnits.add(hit.u.id);
+  }
 
-  list.innerHTML = rows.map(({ u, d }) => {
-    const meta = [u.route, u.location, [u.make, u.model].filter(Boolean).join(' ')].filter(Boolean).map(esc).join(' · ');
-    const hasF = (u.filters || []).length, hasB = (u.belts || []).length;
-    const picked = selectMode && selected.has(u.id);
-    return `<article class="unit s-${d.status}${picked ? ' picked' : ''}" data-id="${esc(u.id)}">
-      <div class="uhead">
-        <div>
-          <div class="uname">${selectMode ? `<input type="checkbox" class="pick" ${picked ? 'checked' : ''} aria-label="Select ${esc(u.name)}">` : ''}<span class="badge" title="${esc(TYPE_NAMES[u.type] || u.type)}">${esc(u.type || 'Other')}</span><h3>${esc(u.name)}</h3></div>
-          ${meta ? `<div class="meta">${meta}</div>` : ''}
-          ${coolLine(u)}
-        </div>
-        ${PUBLIC ? '' : (() => { const lc = [lastOf(u, 'filters'), lastOf(u, 'belts')].filter(Boolean).sort().pop();
-          return d.due == null && lc ? `<span class="pill p-unknown">Last changed ${niceMonth(lc)}</span>` : `<span class="pill p-${d.status}">${relText(d)}</span>`; })()}
-      </div>
-      <div class="parts">
-        <div class="pg"><h4>Filters</h4><div class="chips">${hasF ? u.filters.map(filterChip).join('') : '<span class="none">None listed</span>'}</div></div>
-        <div class="pg"><h4>Belts</h4><div class="chips">${hasB ? u.belts.map(beltChip).join('') : '<span class="none">None / direct drive</span>'}</div></div>
-      </div>
-      ${schedLine('Filters', lastOf(u, 'filters'), u.filterInterval, hasF)}
-      ${schedLine('Belts', lastOf(u, 'belts'), u.beltInterval, hasB)}
-      ${plateBlock(u)}
-      ${logBlock(u)}
-      ${u.notes ? `<div class="notes">${esc(u.notes)}</div>` : ''}
-      ${selectMode || PUBLIC ? '' : `<div class="actions">
-        ${hasF ? `<button class="btn sm" data-act="fdone">✓ Filters changed this month</button>` : ''}
-        ${hasB ? `<button class="btn sm" data-act="bdone">✓ Belts changed this month</button>` : ''}
-        <span class="spacer"></span>
-        <button class="btn sm" data-act="dup">Duplicate</button>
-        <button class="btn sm" data-act="edit">Edit</button>
-        <button class="btn sm danger" data-act="del">Delete</button>
-      </div>`}
-    </article>`;
+  const filtering = !!(q || typeFilter || fr || fs || fc);
+  list.innerHTML = groupRows(rows, sort).map((g, i) => {
+    const key = sort + ':' + g.title, closed = !filtering && closedGroups.has(key);
+    return `<section class="group${closed ? ' closed' : ''}" data-g="${esc(key)}" style="--i:${Math.min(i, 8)}">
+      ${g.title ? `<div class="ghead"><button class="gtoggle" type="button" aria-expanded="${!closed}"><span class="chev"></span><span class="gtitle">${esc(g.title)}</span><span class="gcount">${g.rows.length}</span></button>${selectMode ? '<span class="spacer"></span><button class="btn sm" type="button" data-gsel>Select these</button>' : ''}</div>` : ''}
+      <div class="gbody"><div class="gbody-in">${g.rows.map(({ u, d }) => unitCard(u, d, sort)).join('')}</div></div>
+    </section>`;
   }).join('');
+  if (listEnter) { listEnter = false; setTimeout(() => list.classList.remove('enter'), 1200); }
 }
 
 /* Filter totals: every filter size across all units, plus what's in stock */
@@ -559,20 +634,20 @@ function qtyCell(n, kind) { return `${num(n)}${isBag(kind) && n ? `<small>${num(
 
 function renderTotals() {
   const all = totalsData();
-  $('#tSizes').textContent = all.length;
-  $('#tUse').textContent = num(all.reduce((a, e) => a + e.use, 0));
-  $('#tStock').textContent = num(all.reduce((a, e) => a + e.stock, 0));
-  $('#tOrder').textContent = num(all.reduce((a, e) => a + e.order, 0));
+  setFig('#tSizes', all.length);
+  setFig('#tUse', all.reduce((a, e) => a + e.use, 0));
+  setFig('#tStock', all.reduce((a, e) => a + e.stock, 0));
+  setFig('#tOrder', all.reduce((a, e) => a + e.order, 0));
   const q = $('#tq').value.trim().toLowerCase(), onlyShort = $('#tShort').checked;
   let rows = all;
   if (q) rows = rows.filter(e => (e.size + ' ' + e.kind).toLowerCase().includes(q));
   if (onlyShort) rows = rows.filter(e => e.order > 0);
   const el = $('#totals');
   if (!rows.length) { el.innerHTML = `<div class="empty"><h2>${onlyShort ? 'Nothing short' : 'No matches'}</h2><p>${onlyShort ? 'Stock covers a full change of every filter.' : 'Nothing fits that search.'}</p></div>`; return; }
-  el.innerHTML = `<table><thead><tr><th>Size</th><th>Type</th><th class="units-col">Used in</th>
+  el.innerHTML = `<table><thead><tr><th>Size</th><th class="type-col">Type</th><th class="units-col">Used in</th>
       <th style="text-align:right">Needed</th><th style="text-align:right">In stock</th><th style="text-align:right">To order</th><th></th></tr></thead><tbody>
     ${rows.map(e => `<tr class="${e.spare ? 'stock-only' : ''}" data-key="${esc(e.key)}">
-      <td class="mono">${esc(e.size)}</td><td>${esc(e.kind) || '—'}</td>
+      <td class="mono">${esc(e.size)}<small class="m-only">${esc(e.kind)}</small></td><td class="type-col">${esc(e.kind) || '—'}</td>
       <td class="units-col" title="${esc([...e.units].join(', '))}">${e.units.size ? `${e.units.size} unit${e.units.size === 1 ? '' : 's'}<small>${esc([...e.units].slice(0, 6).join(', '))}${e.units.size > 6 ? '…' : ''}</small>` : '—'}</td>
       <td class="num">${qtyCell(e.use, e.kind)}</td>
       <td style="text-align:right">${PUBLIC ? `<b>${num(e.stock)}</b>` : `<input class="stock-in" type="number" min="0" inputmode="numeric" value="${e.stock}" data-key="${esc(e.key)}" aria-label="In stock ${esc(e.size)} ${esc(e.kind)}">`}</td>
@@ -607,10 +682,10 @@ function beltTotalsData() {
 }
 function renderBeltTotals() {
   const all = beltTotalsData();
-  $('#bSizes').textContent = all.length;
-  $('#bUse').textContent = num(all.reduce((a, e) => a + e.use, 0));
-  $('#bStock').textContent = num(all.reduce((a, e) => a + e.stock, 0));
-  $('#bOrder').textContent = num(all.reduce((a, e) => a + e.order, 0));
+  setFig('#bSizes', all.length);
+  setFig('#bUse', all.reduce((a, e) => a + e.use, 0));
+  setFig('#bStock', all.reduce((a, e) => a + e.stock, 0));
+  setFig('#bOrder', all.reduce((a, e) => a + e.order, 0));
   const q = $('#bq').value.trim().toLowerCase(), onlyShort = $('#bShort').checked;
   let rows = all;
   if (q) rows = rows.filter(e => (e.size + ' ' + [...e.units].join(' ')).toLowerCase().includes(q));
@@ -639,7 +714,7 @@ function setBeltStock(key, qty) {
 function updateBulkBar() {
   const bar = $('#bulkbar');
   bar.hidden = !selectMode;
-  $('#selectBtn').textContent = selectMode ? 'Done selecting' : 'Select…';
+  $('#selectBtn').textContent = selectMode ? 'Done' : 'Select';
   $('#selectBtn').classList.toggle('primary', selectMode);
   if (!selectMode) return;
   const n = selected.size;
@@ -676,10 +751,10 @@ function renderParts() {
   if (!p.count) { el.innerHTML = `<div class="empty"><h2>Nothing here</h2><p>No units match this selection. Due-date options need change dates set on units.</p></div>`; return; }
   const tf = p.filters.reduce((a, f) => a + f.qty, 0), tb = p.belts.reduce((a, b) => a + b.qty, 0);
   el.innerHTML = `
-    <p class="hint">${p.count} unit${p.count === 1 ? '' : 's'} · ${num(tf)} filters · ${num(tb)} belts</p>
+    <p class="hint">${p.count} unit${p.count === 1 ? '' : 's'}, ${num(tf)} filters and ${num(tb)} belts</p>
     <h3 class="section-title">Filters</h3>
-    ${p.filters.length ? `<table><thead><tr><th>Size</th><th>Type</th><th class="units-col">Used in</th><th style="text-align:right">Qty</th></tr></thead><tbody>
-      ${p.filters.map(f => `<tr><td class="mono">${esc(f.size)}</td><td>${esc(f.kind) || '—'}</td><td class="units-col">${[...f.units].map(esc).join(', ')}</td><td class="num">${qtyCell(f.qty, f.kind)}</td></tr>`).join('')}
+    ${p.filters.length ? `<table><thead><tr><th>Size</th><th class="type-col">Type</th><th class="units-col">Used in</th><th style="text-align:right">Qty</th></tr></thead><tbody>
+      ${p.filters.map(f => `<tr><td class="mono">${esc(f.size)}<small class="m-only">${esc(f.kind)}</small></td><td class="type-col">${esc(f.kind) || '—'}</td><td class="units-col">${[...f.units].map(esc).join(', ')}</td><td class="num">${qtyCell(f.qty, f.kind)}</td></tr>`).join('')}
     </tbody></table>` : '<p class="none">No filters.</p>'}
     <h3 class="section-title">Belts</h3>
     ${p.belts.length ? `<table><thead><tr><th>Belt</th><th class="units-col">Used in</th><th style="text-align:right">Qty</th></tr></thead><tbody>
@@ -862,36 +937,64 @@ function backupBox() {
 }
 
 async function copyText(btn, txt, label) {
-  try { await navigator.clipboard.writeText(txt); btn.textContent = 'Copied ✓'; } catch (e) { btn.textContent = 'Copy blocked'; }
+  try { await navigator.clipboard.writeText(txt); btn.textContent = 'Copied'; } catch (e) { btn.textContent = 'Copy blocked'; }
   setTimeout(() => btn.textContent = label, 1600);
 }
 
 /* ---------- events ---------- */
 $('#list').addEventListener('click', e => {
-  if (PUBLIC) return;
+  const gt = e.target.closest('.gtoggle');
+  if (gt) {
+    const sec = gt.closest('.group'), closed = sec.classList.toggle('closed');
+    gt.setAttribute('aria-expanded', String(!closed));
+    if (closed) closedGroups.add(sec.dataset.g); else closedGroups.delete(sec.dataset.g);
+    return;
+  }
+  const gs = e.target.closest('[data-gsel]');
+  if (gs) { gs.closest('.group').querySelectorAll('.unit').forEach(c => selected.add(c.dataset.id)); renderUnits(); return; }
   const ld = e.target.closest('[data-logdel]');
-  if (ld) {
-    e.preventDefault();
+  if (ld && !PUBLIC) {
     const u = S.units.find(x => x.id === ld.closest('.unit').dataset.id);
     confirmBox('Delete note?', '<p style="margin:0">Remove this note from the unit’s log?</p>', 'Delete', () => { u.log = (u.log || []).filter(l => l.id !== ld.dataset.logdel); render(); persist(); });
     return;
   }
+  const card = e.target.closest('.unit');
   if (selectMode) {
-    const card = e.target.closest('.unit'); if (!card) return;
+    if (!card) return;
     const id = card.dataset.id;
     if (selected.has(id)) selected.delete(id); else selected.add(id);
     renderUnits(); return;
   }
-  const btn = e.target.closest('[data-act]'); if (!btn) return;
-  const act = btn.dataset.act;
-  if (act === 'add') return editUnit();
-  const id = btn.closest('.unit').dataset.id, u = S.units.find(x => x.id === id);
-  if (act === 'edit') editUnit(id);
-  else if (act === 'dup') editUnit(null, u);
-  else if (act === 'fdone') markChanged([u], 'filters', thisMonth());
-  else if (act === 'bdone') markChanged([u], 'belts', thisMonth());
-  else if (act === 'del') confirmBox('Delete unit?', `<p style="margin:0">Remove <b>${esc(u.name)}</b> and its filter and belt info?</p>`, 'Delete', () => { S.units = S.units.filter(x => x.id !== id); render(); persist(); });
+  const btn = e.target.closest('[data-act]');
+  if (btn && !PUBLIC) {
+    const act = btn.dataset.act;
+    if (act === 'add') return editUnit();
+    const id = card.dataset.id, u = S.units.find(x => x.id === id);
+    if (act === 'edit') editUnit(id);
+    else if (act === 'dup') editUnit(null, u);
+    else if (act === 'fdone') markChanged([u], 'filters', thisMonth());
+    else if (act === 'bdone') markChanged([u], 'belts', thisMonth());
+    else if (act === 'del') confirmBox('Delete unit?', `<p style="margin:0">Remove <b>${esc(u.name)}</b> and everything recorded for it?</p>`, 'Delete', () => { S.units = S.units.filter(x => x.id !== id); render(); persist(); });
+    return;
+  }
+  // tap a unit to open or close its details (not when the tap was inside the details, or selecting text)
+  if (!card || e.target.closest('.ubody') || String(window.getSelection && window.getSelection()).length) return;
+  const open = card.classList.toggle('open');
+  card.querySelector('.urow').setAttribute('aria-expanded', String(open));
+  if (open) openUnits.add(card.dataset.id); else openUnits.delete(card.dataset.id);
 });
+$('#typeChips').addEventListener('click', e => {
+  const c = e.target.closest('.tchip'); if (!c) return;
+  typeFilter = c.dataset.type; renderUnits();
+});
+$('#filterToggle').onclick = () => {
+  const open = $('#filters').classList.toggle('open');
+  $('#filterToggle').setAttribute('aria-expanded', String(open));
+};
+$('#clearFilters').onclick = () => {
+  $('#q').value = ''; typeFilter = ''; ['fRoute', 'fStatus', 'fCool'].forEach(i => { $('#' + i).value = ''; });
+  renderUnits();
+};
 $('#addBtn').onclick = () => editUnit();
 $('#selectBtn').onclick = () => { selectMode = !selectMode; if (!selectMode) selected.clear(); renderUnits(); };
 $('#bulkAll').onclick = () => { lastShown.forEach(id => selected.add(id)); renderUnits(); };
@@ -904,7 +1007,7 @@ $('#bulkB').onclick = () => {
   const list = selectedUnits(), n = list.filter(u => (u.belts || []).length).length;
   confirmBox('Mark belts changed?', `<p style="margin:0">Mark belts changed this month on <b>${n} unit${n === 1 ? '' : 's'}</b> and take their belts out of stock?</p>`, 'Mark changed', () => { markChanged(list, 'belts', thisMonth()); selected.clear(); selectMode = false; renderUnits(); });
 };
-['q', 'fType', 'fStatus', 'fCool', 'fRoute', 'sort', 'pScope', 'tq', 'tShort', 'bq', 'bShort', 'nq'].forEach(i => $('#' + i).addEventListener('input', render));
+['q', 'fStatus', 'fCool', 'fRoute', 'sort', 'pScope', 'tq', 'tShort', 'bq', 'bShort', 'nq'].forEach(i => $('#' + i).addEventListener('input', render));
 $('#backupBtn').onclick = backupBox;
 $('#githubBtn').onclick = githubBox;
 
@@ -981,10 +1084,20 @@ document.querySelectorAll('.tab').forEach(t => t.onclick = () => go(t.dataset.vi
 document.querySelectorAll('.stat').forEach(s => s.onclick = () => {
   const k = s.dataset.stat;
   $('#fStatus').value = (k === 'overdue' || k === 'soon') ? k : '';
-  $('#q').value = ''; $('#fType').value = ''; $('#fCool').value = '';
+  $('#q').value = ''; typeFilter = ''; $('#fCool').value = ''; $('#fRoute').value = '';
+  if ($('#sort').value === 'cool') $('#sort').value = 'group';
   if (k === 'cool') { $('#fCool').value = 'set'; $('#sort').value = 'cool'; }
   go('units');
 });
+function placeInk() {
+  const t = document.querySelector('.tab[aria-selected="true"]'), ink = $('#tabInk'), bar = $('#tabs');
+  if (!t || !t.offsetWidth) { ink.style.opacity = 0; return; }
+  ink.style.opacity = 1; ink.style.width = t.offsetWidth + 'px'; ink.style.transform = `translateX(${t.offsetLeft}px)`;
+  if (t.offsetLeft < bar.scrollLeft) bar.scrollLeft = t.offsetLeft - 12;
+  else if (t.offsetLeft + t.offsetWidth > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = t.offsetLeft + t.offsetWidth - bar.clientWidth + 12;
+}
+window.addEventListener('resize', placeInk);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeInk);
 function go(name) { if (location.hash.slice(1) === name) route(); else location.hash = name; }
 function route() {
   const h = location.hash.slice(1);
@@ -994,6 +1107,7 @@ function route() {
   else view = ['units', 'totals', 'belts', 'parts'].includes(h) ? h : 'units';
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === view)));
   ['units', 'totals', 'belts', 'parts', 'notes', 'today'].forEach(v => { $('#view-' + v).hidden = v !== view; });
+  placeInk();
   render();
 }
 window.addEventListener('hashchange', route);
@@ -1006,7 +1120,6 @@ $('#todayDate').addEventListener('input', renderToday);
 $('#todayApply').onclick = applyToday;
 $('#todayClear').onclick = () => { $('#todayText').value = ''; try { localStorage.removeItem('fbt-today-draft'); } catch (e) {} renderToday(); };
 try { const d = localStorage.getItem('fbt-today-draft'); if (d) $('#todayText').value = d; } catch (e) {}
-$('#fType').innerHTML += TYPES.map(t => `<option value="${t}">${typeLabel(t)}</option>`).join('');
 route();
 initStorage();
 })();

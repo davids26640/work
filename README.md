@@ -1,6 +1,6 @@
-# Filter & Belt Tracker
+# HVAC Tracker
 
-A tracker for the plant's ash houses, air handlers, rooftop units and heaters: filter and belt sizes, filter and belt stock, what to order, cooling capacity, data plates and notes.
+Keeps track of the plant's ash houses, air handlers, rooftop units and heaters: filter and belt sizes, filter and belt stock, what to order, cooling capacity, data plates and notes.
 
 ## Who sees what
 - **Anyone who opens the site** sees the view-only version: no filter or belt change dates, no due dates, no daily notes log, and no editing.

@@ -1,4 +1,4 @@
-/* Filter & Belt Tracker: public offline copy. No change dates. The live site loads current data from the database. */
+/* HVAC Tracker: public offline copy. No change dates. The live site loads current data from the database. */
 window.TRACKER_DATA = {
  "public": true,
  "exportedAt": "2026-11-17T12:54:52.807Z",
