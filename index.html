@@ -112,8 +112,9 @@
       <button class="btn sm" id="bulkAll">Select all shown</button>
       <button class="btn sm" id="bulkClear">Clear</button>
       <span class="spacer"></span>
-      <button class="btn sm primary" id="bulkF">Filters changed this month</button>
-      <button class="btn sm primary" id="bulkB">Belts changed this month</button>
+      <button class="btn sm primary" id="bulkSvc">Add service record</button>
+      <button class="btn sm" id="bulkF">Filters changed this month</button>
+      <button class="btn sm" id="bulkB">Belts changed this month</button>
     </div>
     <div class="list" id="list"></div>
   </section>
@@ -194,7 +195,7 @@
       <div class="today-input">
         <label class="arrange" style="margin-bottom:10px"><span>Date</span><input type="date" id="todayDate"></label>
         <textarea id="todayText" rows="12" placeholder="RTU 08&#10;Replaced supply fan belt&#10;&#10;Ash 12&#10;Needs pleats, bags changed"></textarea>
-        <p class="hint">Put the unit name on its own line, then what was done on the lines below. Leave a blank line before the next unit. One line works too, like <b>RTU 08: replaced belt</b>. Each one is added to that unit's service record.</p>
+        <p class="hint">Put the unit name on its own line, then what was done on the lines below. Leave a blank line before the next unit. One line works too, like <b>RTU 08: replaced belt</b>. To put the same entry on several units, name them together, like <b>Ash 1, Ash 2, Ash 5</b> or <b>Ash 1-11</b>. Each one is added to that unit's service record.</p>
         <div class="today-actions"><button class="btn" id="todayClear">Clear</button><button class="btn primary" id="todayApply" disabled>Add to service records</button></div>
       </div>
       <div class="today-preview">

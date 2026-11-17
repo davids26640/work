@@ -379,6 +379,30 @@ function unitIndex() {
   S.units.forEach(u => { const k = normUnit(u.name); if (!k) return; m.set(k, m.has(k) ? 'AMBIG' : u); });
   return m;
 }
+/* "Ash 1, Ash 2 and Ash 5", "Ash 1-11" or "Ash 12 to 25": every unit named, or null.
+   A range skips numbers that aren't units (like Ash 26 and 27). */
+function findMany(line, find) {
+  const l = line.replace(/^[(\s]+|[)\s:]+$/g, '');
+  if (l.length > 120) return null;
+  const r = /^(.*?)(\d+)\s*(?:-|–|to|thru|through)\s*(\d+)$/i.exec(l);
+  if (r && r[1].trim() && /[a-z]/i.test(r[1])) {
+    const a = +r[2], b = +r[3], out = [];
+    if (b > a && b - a <= 200) for (let n = a; n <= b; n++) { const u = find(r[1] + n); if (u && !out.includes(u)) out.push(u); }
+    if (out.length >= 2) return out;
+  }
+  const parts = l.split(/\s*(?:,|&|\+|\band\b)\s*/i).filter(Boolean);
+  if (parts.length < 2) return null;
+  const out = [];
+  let prefix = '';
+  for (const p of parts) {
+    let u = find(p);
+    if (!u && /^\d+$/.test(p) && prefix) u = find(prefix + p);   // "Ash 1, 2, 5"
+    if (!u) return null;
+    const pm = /^(.*?)\d+$/.exec(p); if (pm && pm[1].trim()) prefix = pm[1];
+    if (!out.includes(u)) out.push(u);
+  }
+  return out.length >= 2 ? out : null;
+}
 function parseToday(text) {
   const idx = unitIndex(), blocks = [];
   let cur = null, afterBlank = true;
@@ -389,6 +413,9 @@ function parseToday(text) {
     const line = raw.trim();
     if (!line) { afterBlank = true; return; }
     const startsBlock = afterBlank; afterBlank = false;
+    // a list or range ("Ash 1, 2, 5", "Ash 1-11") first, so "Ash 1-11" isn't read as Ash 111
+    const many = findMany(line, find);
+    if (many) { const lines = []; many.forEach(x => blocks.push({ unit: x, label: line, lines })); cur = { lines }; return; }
     let u = find(line);
     if (u) { cur = { unit: u, label: line, lines: [] }; blocks.push(cur); return; }
     const m = /^(.{1,40}?)\s*(?::|\s-\s|\s–\s)\s*(.+)$/.exec(line);
@@ -744,7 +771,7 @@ function updateBulkBar() {
   if (!selectMode) return;
   const n = selected.size;
   $('#bulkCount').textContent = n ? `${n} selected` : 'Tap units to select them';
-  ['#bulkF', '#bulkB', '#bulkClear'].forEach(id => { $(id).disabled = !n; });
+  ['#bulkSvc', '#bulkF', '#bulkB', '#bulkClear'].forEach(id => { $(id).disabled = !n; });
 }
 function selectedUnits() { return S.units.filter(u => selected.has(u.id)); }
 
@@ -1064,6 +1091,50 @@ $('#addBtn').onclick = () => editUnit();
 $('#selectBtn').onclick = () => { selectMode = !selectMode; if (!selectMode) selected.clear(); renderUnits(); };
 $('#bulkAll').onclick = () => { lastShown.forEach(id => selected.add(id)); renderUnits(); };
 $('#bulkClear').onclick = () => { selected.clear(); renderUnits(); };
+$('#bulkSvc').onclick = () => bulkServiceBox(selectedUnits());
+function bulkServiceBox(list) {
+  if (!list.length) return;
+  const nF = list.filter(u => (u.filters || []).length).length, nB = list.filter(u => (u.belts || []).length).length;
+  const names = list.map(u => u.name);
+  openModal(`<form id="bsform" novalidate>
+    <div class="dhead"><h2>Add a service record</h2><div class="dhead-actions"><button type="submit" class="btn primary sm">Add</button><button type="button" class="btn ghost" data-m="cancel" title="Close">✕</button></div></div>
+    <div class="dbody">
+      <p class="hint" style="margin-top:0">Goes on ${list.length} unit${list.length === 1 ? '' : 's'}: ${esc(names.slice(0, 12).join(', '))}${names.length > 12 ? ` and ${names.length - 12} more` : ''}.</p>
+      <div class="grid" style="margin-top:12px">
+        <div class="f c2"><label for="bs-date">Date of the work</label><input type="date" id="bs-date" name="date" value="${fmtD(today())}" required></div>
+      </div>
+      <div class="f" style="margin-top:10px"><label for="bs-text">What was done</label><textarea id="bs-text" name="text" rows="3" placeholder="Like “Bags and pre-filters changed”"></textarea></div>
+      <fieldset><legend>Also update the change schedule</legend>
+        <label class="check"${nF ? '' : ' hidden'}><input type="checkbox" name="filters"> Filters were changed${nF < list.length ? ` (${nF} of these units have filters)` : ''}</label>
+        <label class="check" style="margin-top:8px"${nB ? '' : ' hidden'}><input type="checkbox" name="belts"> Belts were changed${nB < list.length ? ` (${nB} of these units have belts)` : ''}</label>
+        <p class="hint">Sets the last-changed month to the month of this date, unless a unit already has a later one. Stock counts aren't changed, since this is past work.</p>
+      </fieldset>
+      <div class="err" id="bserr"></div>
+    </div>
+    <div class="dfoot"><button type="button" class="btn" data-m="cancel">Cancel</button><button type="submit" class="btn primary">Add to ${list.length} unit${list.length === 1 ? '' : 's'}</button></div></form>`);
+  const f = $('#bsform');
+  f.querySelectorAll('[data-m=cancel]').forEach(b => b.onclick = closeModal);
+  f.onsubmit = e => {
+    e.preventDefault();
+    const date = f.elements.date.value, doF = f.elements.filters.checked, doB = f.elements.belts.checked;
+    let text = f.elements.text.value.trim();
+    if (!date) { $('#bserr').textContent = 'Pick the date the work was done.'; return; }
+    if (!text && !doF && !doB) { $('#bserr').textContent = 'Write what was done, or tick filters or belts.'; f.elements.text.focus(); return; }
+    if (!text) text = doF && doB ? 'Filters and belts changed' : doF ? 'Filters changed' : 'Belts changed';
+    const month = date.slice(0, 7), snap = list.map(u => [u.id, u.log, u.filterLast, u.beltLast]);
+    let datesSet = 0;
+    list.forEach(u => {
+      u.log = (u.log || []).concat(svcEntry(date, text));
+      if (doF && (u.filters || []).length && (monthIdx(u.filterLast) == null || monthIdx(month) > monthIdx(u.filterLast))) { u.filterLast = month; datesSet++; }
+      if (doB && (u.belts || []).length && (monthIdx(u.beltLast) == null || monthIdx(month) > monthIdx(u.beltLast))) { u.beltLast = month; datesSet++; }
+    });
+    closeModal(); selected.clear(); selectMode = false; render(); persist();
+    toast(`Service record added to ${list.length} unit${list.length === 1 ? '' : 's'}${datesSet ? ', change dates updated' : ''}.`, () => {
+      snap.forEach(([id, log, fl, bl]) => { const u = S.units.find(x => x.id === id); if (u) { u.log = log; u.filterLast = fl; u.beltLast = bl; } });
+      render(); persist(); toast('Undone.');
+    });
+  };
+}
 $('#bulkF').onclick = () => {
   const list = selectedUnits(), n = list.filter(u => (u.filters || []).length).length;
   confirmBox('Mark filters changed?', `<p style="margin:0">Mark filters changed this month on <b>${n} unit${n === 1 ? '' : 's'}</b> and take their filters out of stock?</p>`, 'Mark changed', () => { markChanged(list, 'filters', thisMonth()); selected.clear(); selectMode = false; renderUnits(); });
